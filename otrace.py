@@ -3489,7 +3489,7 @@ class DefaultCallback(TraceCallback):
             
 class CallbackLogHandler(logging.Handler):
      def __init__(self):
-         super(CallbackLogHandler, self).__init__()
+         logging.Handler.__init__(self)
 
      def emit(self, record):
          if OTrace.callback_handler:

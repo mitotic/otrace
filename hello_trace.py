@@ -83,7 +83,7 @@ class MultiThreadedServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer
     pass
 
 if __name__ == "__main__":
-    http_addr = ""
+    http_addr = "127.0.0.1"
     http_port = 8888
 
     # HTTP server
