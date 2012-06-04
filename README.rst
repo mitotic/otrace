@@ -73,7 +73,7 @@ Here is a simple server example::
    separate thread, ^C will abort and cleanup *oshell*. You may need to
    shutdown the event loop cleanly after that.
 
- - Install the python ``readline`` module to enable *TAB* command completion.
+ - Install the python ``readline`` module (``easy_install readline``) to enable *TAB* command completion.
 
  - To start a detached server (daemon) process, use the command:
       ``screen -d -m -S <screen_name> <executable> <argument1> ...``

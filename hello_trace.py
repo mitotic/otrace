@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
     # HTTP server
     http_server = MultiThreadedServer((http_addr, http_port), GetHandler)
-    print >> sys.stderr, "Listening on port %d" % http_port
+    print >> sys.stderr, "Listening on %s:%s" % (http_addr, http_port)
 
     # Test function that raises an exception
     def test_fun():

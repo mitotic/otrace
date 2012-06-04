@@ -75,6 +75,7 @@ class GetHandler(tornado.web.RequestHandler):
 if __name__ == "__main__":
     # Define command line options
     define("port", default=8888, help="run on the given port", type=int)
+    define("addr", default="127.0.0.1", help="IP address")
 
     tornado.options.options.logging = "none"    # Disable tornado logging
     tornado.options.parse_command_line()
@@ -84,8 +85,8 @@ if __name__ == "__main__":
 
     # Start tornado HTTP server
     http_server = tornado.httpserver.HTTPServer(app)
-    http_server.listen(options.port)
-    print >> sys.stderr, "Listening on port %d" % options.port
+    http_server.listen(options.port, address=options.addr)
+    print >> sys.stderr, "Listening on %s:%s" % (options.addr, options.port)
 
     # Test function that raises an exception
     def test_fun():

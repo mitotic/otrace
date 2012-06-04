@@ -390,7 +390,7 @@ def main():
     logging.getLogger().setLevel(options.console)
 
     app = Application()
-    app.listen(options.port)
+    app.listen(options.port, address=options.addr)
     print "chat_websock: Listening on %s:%s" % (options.addr, options.port)
 
     IO_loop = tornado.ioloop.IOLoop.instance()
