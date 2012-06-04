@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 #
-# OTrace: An object-oriented shell for nonlinear tracing
+# otrace: An object-oriented tracing tool for nonlinear debugging
 #
-# OTrace was developed as part of the Mindmeldr project.
-# Documentation can be found at http://mindmeldr.com/code/otrace
+# otrace was developed as part of the Mindmeldr project.
+# Documentation can be found at http://info.mindmeldr.com/code/otrace
 #
 #  BSD License
 #
@@ -31,35 +31,40 @@
 #  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-"""**OTrace: An object-oriented shell for nonlinear tracing**
+"""An object-oriented tracing tool for nonlinear debugging
 
-*INSTALLATION*
+Installation
+============
 
-Ensure ``otrace.py`` is in the python module load path  
+Ensure that ``otrace.py`` is in the python module load path.
 
-*USAGE*
+Usage
+======
 
-OTrace may be used as:
+*otrace* may be used as:
    - a tracing tool for debugging web servers and interactive programs
-   - a console or *dashboard* for monitoring production servers
-   - a temporary code patching tool for unit testing
+   - a console or dashboard for monitoring production servers
+   - a teaching tool for exploring the innards of a program
+   - a code patching tool for unit testing
 
-OTrace does not consume any resources until some tracing action is
-initiated. So it can be included in production code.
-OTrace works well with detached server processes (*daemons*)
-via the GNU ``screen`` utility that simulates a terminal.
+*otrace* does not consume any resources until some tracing action is
+initiated. So it can be included in production code without any
+performance penalty.
+*otrace* works well with detached server processes (*daemons*)
+via the GNU `screen <http://www.gnu.org/software/screen>`_
+utility that emulates a terminal.
  
-OTrace is meant to be used in conjunction with an *event loop*, which
+*otrace* is meant to be used in conjunction with an *event loop*, which
 is usually present in programs that interact with users such as web
-servers or GUI applications. OTrace takes control of the terminal,
-and would not work very well with programs that read user input from
-the terminal (standard input).
+servers or GUI applications. *otrace* takes control of the terminal,
+and would not work very well with programs that read user input
+directly from the terminal (or standard input).
 
-To use OTrace, ``import otrace`` and instantiate the class ``otrace.OShell``,
-which provides an unix-like shell interface to interact with a running
+To use *otrace*, simply ``import otrace`` and instantiate the class ``otrace.OShell``,
+which provides a unix-like shell interface to interact with a running
 program via the terminal.
 
-Simple server example::
+Here is a simple server example::
 
      import BaseHTTPServer
      from SimpleHTTPServer import SimpleHTTPRequestHandler
@@ -74,14 +79,14 @@ Simple server example::
      except KeyboardInterrupt:
          oshell.shutdown()
 
-Usage notes:
+*Usage notes:*
 
- - If you run in OShell in its own daemon thread as shown above, use
+ - If you run in *oshell* in its own daemon thread as shown above, use
    the ^C sequence to abort the main thread, and call ``OShell.shutdown``
    from main thread to cleanup terminal I/O etc.
 
- - If you run OShell in the main thread and the event loop in a
-   separate thread, ^C will abort and cleanup OShell. You may need to
+ - If you run *oshell* in the main thread and the event loop in a
+   separate thread, ^C will abort and cleanup *oshell*. You may need to
    shutdown the event loop cleanly after that.
 
  - Install the python ``readline`` module to enable *TAB* command completion.
@@ -91,21 +96,19 @@ Usage notes:
    To attach a terminal to this process, use:
       ``screen -r <screen_name>``
 
- - By default, OTrace logs to the ``logging`` module. Subclass
+ - By default, *otrace* logs to the ``logging`` module. Subclass
    ``TraceCallback``, overriding the methods ``callback`` and ``returnback``
    to implement your own logging  (see ``DefaultCallback`` for a simple example)
 
-*SYNOPSIS*
+Synopsis
+=========
 
-OTrace uses a *Virtual Directory Shell Interface* which maps all the
+*otrace* uses a *Virtual Directory Shell Interface* which maps all the
 objects in a a running python program to a virtual filesystem mounted in
-the directory::
-
-   /osh
-
-Each module, class, method, function, and variable in the global namespace
+the directory ``/osh`` (sort of like the unix ``/proc`` filesystem, if you are
+familiar with it). Each module, class, method, function, and variable in the global namespace
 is mapped to a virtual file within this directory.
-For example, a class ``TestClass`` in the globals dict can be accessed as::
+For example, a class ``TestClass`` in the ``globals()`` dictionary can be accessed as::
 
    /osh/globals/TestClass
 
@@ -115,30 +118,41 @@ and a method ``test_method`` can be accessed as::
 
 and so on.
 
-OTrace provides a unix shell-like interface, OShell, with commands
+*otrace* provides a unix shell-like interface, *oshell*, with commands
 such as ``cd``, ``ls``, ``view``, and ``edit`` that can be used navigate, view,
 and edit the virtual files. Editing a function or method
-*monkey patches* it, allowing the insertion of ``print`` statements etc.
+"`monkey patches <http://en.wikipedia.org/wiki/Monkey_patch>`_"  it,
+allowing the insertion of ``print`` statements etc. in the running program.
 
 The ``trace`` command allows dynamic tracing of function or method invocations,
-return values, and exceptions can be dynamically traced, saving
-*context information*,such as arguments and return values,
-in a newly created virtual directory in::
+return values, and exceptions. This is accomplished by
+dynamically *decorating* (or *wrapping*) the function to be traced.
+When a trace condition is satisfied, the function-wrapper saves *context information*, such as
+arguments and return values, in a newly created virtual directory in::
 
     /osh/recent/*
 
-These *context directories* can be navigated just like ``/osh/globals/*``
+These *trace context* directories can be navigated just like
+``/osh/globals/*``. (If there are too many trace contexts, the oldest
+ones are deleted, unless they have been explicitly *saved*.)
 
-OShell allows standard unix shell commands to be interspersed with
-OShell-specific commands. The path of the *current working directory*
-is used to automatically switch between the these two types of commands.
+*oshell* allows standard unix shell commands to be interspersed with
+*oshell*-specific commands. The path of the "current working directory"
+determines which of the these two types of commands will be executed. 
+If the current working directory is not in ``/osh/*``, the command is
+treated as a standard unix shell command (except for ``cd``, which is
+always handled by *oshell*.)
 
-*COMMANDS*::
+Commands
+========
+*oshell* supports the following commands ([..] denotes optional
+parameters; | denotes alternatives)::
 
  alias name cmd <arg\*> <arg\1>... # Define alias for command
  cd [pathname]             # change directory to "pathname", which may be omitted, "..", or "/" or a path
  cdls [pathname]           # cd to "pathname" and list "files" (cd+ls)
  del [trace_id1..]         # Delete trace context
+ dn                        # Command alias to move down stack frames in a trace context
  edit [-f] (filename|class[.method]) [< readfile]  # Edit/patch file/method/function
  exec python_code          # Execute python code (also !<python_code>)
  help [command|*]          # Display help information
@@ -161,23 +175,46 @@ is used to automatically switch between the these two types of commands.
  up                        # Command alias to move up stack frames in a trace context
  view [-d] [-i] [class/method/file]  # Display source/doc for objects/traces/files
 
-Use ``otrace.traceassert(<condition>,label=..,action=..)`` to trace assertions
+The default command is ``pr``, which evaluates an expression.  So you
+can simply type a python variable to print out its value. You can also
+insert ``otrace.traceassert(<condition>,label=..,action=..)`` to trace
+assertions.
 
 
-OTrace was inspired by the following:
- - the tracing module `echo.py
-   <http://wordaligned.org/articles/echo>`_ written by Thomas Guest <tag@wordaligned.org>. This nifty little program uses decorators to trace function calls.
+Caveats
+========
+
+ - *Reliability:*  This software has not been subject to extensive testing. Use at your own risk.
+
+ - *Thread safety:* In principle, *otrace* should thread-safe, but more testing is needed to confirm this in practice.
+
+ - *Memory leaks:*  The trace contexts saved by *otrace* could potentially lead to increased memory usage. Again, only experience will tell.
+
+ - *Platforms:*  *otrace* is pure-python, but it has only been tested onLinux and OS X, so far.
+
+ - *Current limitations:*
+          * Decorated methods cannot be patched.
+          * TAB command completion is a work in progress.
+          * Spaces and other special characters in command arguments need to be handled better.
+
+Credits
+========
+
+*otrace* was developed as part of the `Mindmeldr <http://mindmeldr.com>`_ project, which is aimed at improving classroom interaction.
+
+*otrace* was inspired by the following:
+ - the tracing module `echo.py <http://wordaligned.org/articles/echo>`_ written by Thomas Guest <tag@wordaligned.org>. This nifty little program uses decorators to trace function calls.
 
  - the python ``dir()`` function, which treats objects as directories. If objects are directories, then shouldn't we be able to inspect them using the familiar ``cd`` and ``ls`` unix shell commands?
 
- - the unix `proc
-   <http://en.wikipedia.org/wiki/Procfs>`_ filesystem, which cleverly maps non-file data to a filesystem interface mounted at ``/proc``
+ - the unix `proc <http://en.wikipedia.org/wiki/Procfs>`_ filesystem, which cleverly maps non-file data to a filesystem interface mounted at ``/proc``
 
-OTrace was developed as part of the `Mindmeldr
-<http://mindmeldr.com>`_ project. Additional documentation can be found at `mindmeldr.com/code/otrace
-<http://mindmeldr.com/code/otrace>`_.
+ - the movie `Being John Malkovich <http://en.wikipedia.org/wiki/Being_John_Malkovich>`_ (think of ``/osh`` as the portal to the "mind" of a running program)
 
-OTrace is BSD-licensed.
+License
+=========
+*otrace* is distributed as open source under the `BSD-license <http://www.opensource.org/licenses/bsd-license.php>`_.
+
 """
 
 from __future__ import with_statement
@@ -286,7 +323,7 @@ ALT_SCREEN_OFFSEQ = "\x1b[?1049l"
 INAME = 0
 ISUBDIR = 1
 
-DOC_URL = "http://mindmeldr.com/code/otrace"
+DOC_URL = "http://info.mindmeldr.com/code/otrace"
 DEFAULT_BANNER = """  ***otrace object shell (v%s)*** (type 'help' for info)""" % OTRACE_VERSION
 
 Help_params = OrderedDict()
@@ -1206,8 +1243,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                  init_file=None, allow_unsafe=False, work_dir="",
                  add_env={}, banner=DEFAULT_BANNER, no_input=False,
                  new_thread=False, echo_callback=None,
-                 db_interface=None, web_interface=None, hold_handler=None,
-                 _stdin=sys.stdin, _stdout=sys.stdout, _stderr=sys.stderr):
+                 db_interface=None, web_interface=None, hold_wrapper=None,
+                 eventloop_callback=None, _stdin=sys.stdin, _stdout=sys.stdout, _stderr=sys.stderr):
         """Create OShell instance, but do not start the run loop (use OShell.loop for that).
 
         Args:
@@ -1226,7 +1263,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             banner: string to display in terminal at startup
             db_interface: database interface class
             web_interface: websocket interface class
-            hold_handler: request hold interface class
+            hold_wrapper: wrapper class for yielding holds [e.g., yield hold_wrapper(callback_func)]
+            eventloop_callback: schedules callback; has signature eventloop_callback(callback_function)
             _stdin, _stdout, _stder: input, output, error streams
         """
 
@@ -1243,8 +1281,11 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         self.work_dir = work_dir
         self.add_env = add_env
 
-        if hold_handler:
-            OTrace.hold_handler = hold_handler
+        if hold_wrapper:
+            OTrace.hold_wrapper = hold_wrapper
+
+        if eventloop_callback:
+            OTrace.eventloop_callback = eventloop_callback
 
         OTrace.base_context[GLOBALS_DIR] = globals_dict
         OTrace.base_context[LOCALS_DIR] = locals_dict
@@ -3484,7 +3525,8 @@ class OTrace(object):
 
     interpreter = TraceInterpreter()
     callback_handler = DefaultCallback()
-    hold_handler = None
+    hold_wrapper = None
+    eventloop_callback = None
     html_wrapper = None
 
     default_context = {"__name__": "__otrace__", "__doc__": None,
@@ -3520,12 +3562,15 @@ class OTrace(object):
         raise OTraceException("Class cannot be instantiated")
 
     @classmethod
-    def setup(cls, start_path=[BASE_DIR, GLOBALS_DIR], callback_handler=None, hold_handler=None):
+    def setup(cls, start_path=[BASE_DIR, GLOBALS_DIR], callback_handler=None,
+              hold_wrapper=None, eventloop_callback=None):
         cls.recent_pathnames = start_path
         if callback_handler:
             cls.callback_handler = callback_handler
-        if hold_handler:
-            cls.hold_handler = hold_handler
+        if hold_wrapper:
+            cls.hold_wrapper = hold_wrapper
+        if eventloop_callback:
+            cls.eventloop_callback = eventloop_callback
 
     @classmethod
     def class_method_names(cls, method, parent=None):
@@ -3785,14 +3830,21 @@ class OTrace(object):
 
     @classmethod
     def traceassert(cls, condition, label="", action=None):
-        """Handles trace assertions. Returns callable if action=="hold", or breaks if action=="break",
-        or invokes pdb if action=="debug"
+        """Trace assertions.
+        If not tracing, simply acts like "assert condition, label".
+        If action=="break", break execution if condition is False.
+        If action=="debug", invokes pdb if condition is False.
+        If action=="hold", returns a callable object that accepts a single argument, callback,
+          wrapped in a hold_wrapper.
+          The callable object will schedule an immediate callback in the event loop if condition is True,
+          but delays the callback until the "resume" command, if condition is False.
         """
         if condition:
-            return
+            # Asserted condition is true; if "hold" action, schedule immediate callback
+            return cls.hold_wrapper(schedule_callback) if action == "hold" and cls.hold_wrapper else None
 
         if not cls.trace_active:
-            assert condition
+            assert condition, label
             return
 
         frame_records = inspect.stack(context=Set_params["assert_context"])[1:]
@@ -3924,15 +3976,15 @@ class OTrace(object):
         trace_id, context_id = ContextDict.make_trace_id(context_type, fullmethodname, id_label, cls.get_timestamp())
         new_context_path = [BASE_DIR, RECENT_DIR] + list(ContextDict.split_trace_id(trace_id))
         if self_arg is not None:
-            if context_type == "holds" and cls.hold_handler:
+            if context_type == "holds" and cls.hold_wrapper:
                 # Set hold callback attribute
                 # Hold handler should return a callable entity (for use by trampoline)
                 # When called, the callable should accept a callback function as the argument
                 # and should set the resume_attr of self_arg to the callback function (or a proxy).
                 # NOTE: callback function should not block otrace thread; it should schedule a callback in the event loop
                 try:
-                    setattr(self_arg, cls.hold_attr, cls.hold_handler(self_arg, cls.hold_attr, cls.resume_attr,
-                                                                      PATH_SEP+PATH_SEP.join(new_context_path)) )
+                    setattr(self_arg, cls.hold_attr,
+                            cls.hold_wrapper(HoldHandler(self_arg, PATH_SEP+PATH_SEP.join(new_context_path)) ) )
                 except Exception:
                     pass
 
@@ -4313,13 +4365,12 @@ class OTrace(object):
                     except Exception:
                         pass
 
-                    if info.call_display and break_action == "hold" and cls.hold_handler and info.self_arg is not None:
+                    if info.call_display and break_action == "hold" and cls.hold_wrapper and info.self_arg is not None:
                         # Hold before generator executes
                         try:
                             context_path = [BASE_DIR, RECENT_DIR] + list(ContextDict.split_trace_id(info.trace_id))
-                            async_handler = cls.hold_handler(info.self_arg, cls.hold_attr, cls.resume_attr,
-                                                             PATH_SEP+PATH_SEP.join(context_path),
-                                                             resume_value=wrapped_gen)
+                            async_handler = cls.hold_wrapper(HoldHandler(info.self_arg, PATH_SEP+PATH_SEP.join(context_path),
+                                                                         resume_value=wrapped_gen) )
                             setattr(info.self_arg, cls.hold_attr, async_handler)
                             return async_handler
                         except Exception:
@@ -4417,12 +4468,11 @@ class OTrace(object):
             if break_action in ("break", "debug"):
                 cls.break_flow(info.trace_id, oshell=(OShell.instance if break_action == "break" else None))
 
-            elif break_action == "hold" and trampoline_return and cls.hold_handler and info.self_arg is not None:
+            elif break_action == "hold" and trampoline_return and cls.hold_wrapper and info.self_arg is not None:
                 try:
                     context_path = [BASE_DIR, RECENT_DIR] + list(ContextDict.split_trace_id(info.trace_id))
-                    async_handler = cls.hold_handler(info.self_arg, cls.hold_attr, cls.resume_attr,
-                                                     PATH_SEP+PATH_SEP.join(context_path),
-                                                     resume_value=return_value)
+                    async_handler = cls.hold_wrapper(HoldHandler(info.self_arg, PATH_SEP+PATH_SEP.join(context_path),
+                                                                 resume_value=return_value) )
                     setattr(info.self_arg, cls.hold_attr, async_handler)
                     return async_handler
                 except Exception:
@@ -4834,6 +4884,42 @@ class OTrace(object):
                     setattr(parent, mname, cls.trace_function(getattr(parent, mname), methodtype=methodtype, unwrap=False))
 
             return unpatch
+
+def schedule_callback(callback=None):
+    if not callback:
+        return
+    if OTrace.eventloop_callback:
+        # Schedule callback in event loop to ensure thread safety
+        OTrace.eventloop_callback(callback)
+    else:
+        # Direct callback; may be unsafe!
+        callback()
+
+class HoldHandler(object):
+    """ Hold handler for use with otrace (callable instance)
+    """
+    def __init__(self, self_arg, path, resume_value=None):
+        self.self_arg = self_arg
+        self.path = path
+        self.resume_value = resume_value
+        self.callback = None
+
+    def __call__(self, callback=None):
+        # Save callback for use on request completion
+        self.callback = callback
+        if hasattr(self.self_arg, OTrace.hold_attr):
+            delattr(self.self_arg, OTrace.hold_attr)
+        setattr(self.self_arg, OTrace.resume_attr, self.resume)
+
+    def resume(self):
+        # Executed in otrace thread; should insert resume callback in event loop and return immediately
+        if hasattr(self.self_arg, OTrace.resume_attr):
+            delattr(self.self_arg, OTrace.resume_attr)
+        callback = self.callback
+        self.callback = None
+        if not callback:
+            return
+        schedule_callback(functools.partial(callback, self.resume_value))
 
 
 # Convenient aliases

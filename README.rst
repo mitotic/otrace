@@ -1,4 +1,4 @@
-otrace: An object-oriented debugger for nonlinear tracing
+otrace: An object-oriented tracing tool for nonlinear debugging
 *********************************************************************************
 .. sectnum::
 .. contents::
@@ -6,7 +6,7 @@ otrace: An object-oriented debugger for nonlinear tracing
 This README file provides a brief introduction to *otrace*.
 Additional documentation and other information can be found on the
 project home page,
-`mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
+`info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
 
 Installation
 ==============================
@@ -174,17 +174,17 @@ Caveats
 
  - *Memory leaks:*  The trace contexts saved by *otrace* could potentially lead to increased memory usage. Again, only experience will tell.
 
+ - *Platforms:*  *otrace* is pure-python, but it has only been tested onLinux and OS X, so far.
+
  - *Current limitations:*
           * Decorated methods cannot be patched.
           * TAB command completion is a work in progress.
           * Spaces and other special characters in command arguments need to be handled better.
 
-
 Credits
 ===============================
 
-*otrace* was developed as part of the `Mindmeldr
-<http://mindmeldr.com>`_ project, which is aimed at improving classroom interaction.
+*otrace* was developed as part of the `Mindmeldr <http://mindmeldr.com>`_ project, which is aimed at improving classroom interaction.
 
 *otrace* was inspired by the following:
  - the tracing module `echo.py <http://wordaligned.org/articles/echo>`_ written by Thomas Guest <tag@wordaligned.org>. This nifty little program uses decorators to trace function calls.

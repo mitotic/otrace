@@ -276,6 +276,28 @@ The ``untrace`` command can be used to switch off tracing::
   untraced GetHandler.respond
   globals> 
 
+Monitoring using the repeat command
+=========================================================
+
+The ``repeat`` command indefinitely repeats whatever command that
+follows it, erasing the screen each time before displaying the
+output. The default repeat interval is 0.2 seconds, and that
+can be changed via the ``set repeat_interval`` command.
+Any user input, or a trace event will end the repeat cycle.
+Here's an example of using ``repeat`` to monitor the requests
+processed by the demo the web server::
+
+> repeat ls -l Request_stats/*
+
+
+Breakpoints
+=========================================================
+
+Breakpoints can be set using the ``-a break`` option for the ``trace``
+command, or the ``action="break"`` argument to ``traceassert``.
+The ``resume`` command is used to resume execution from a breakpoint.
+
+
 .. |date| date::
 
 *Last modified:* |date|

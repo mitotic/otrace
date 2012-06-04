@@ -6,6 +6,7 @@
 import logging
 import sys
 
+import tornado.gen
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
@@ -36,6 +37,8 @@ Page_template = """<html>
 Request_stats = {"count":0, "path":""}
 
 class GetHandler(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.engine
     def get(self):
         logging.warning("path=%s", self.request.uri)
 
@@ -46,19 +49,23 @@ class GetHandler(tornado.web.RequestHandler):
         # Retrieve user input
         number = self.get_argument("number", None)
 
+        # Trace assertion
+        yield traceassert(number != "77", label="hold_check", action="hold")
+
         if number is None:
             # No user input; display input form
-            self.write(Page_template % "")
+            self.finish(Page_template % "")
         else:
             # Process user input and display response
-            self.write(Page_template % self.respond(number))
+            self.finish(Page_template % self.respond(number))
 
     def respond(self, number):
         # Respond to request by processing user input
         number = float(number)
 
-        # Trace assertion (initially commented out)
+        # Trace assertion
         ##traceassert(number > 0.001, label="num_check")
+        # Uncomment above line to check traceassert
 
         # Compute reciprocal of number
         response = "The reciprocal of %s is %s" % (number, 1.0/number)
@@ -85,15 +92,17 @@ if __name__ == "__main__":
         raise Exception("TEST EXCEPTION")
 
     # Initialize OShell instance (to run on separate thread)
+    IO_loop = tornado.ioloop.IOLoop.instance()
     trace_shell = OShell(locals_dict=locals(), globals_dict=globals(), allow_unsafe=True,
-                         init_file="torna_trace.trc", new_thread=True)
+                         init_file="torna_trace.trc", new_thread=True,
+                         hold_wrapper=tornado.gen.Task,
+                         eventloop_callback=IO_loop.add_callback)
 
     try:
         # Start oshell
         trace_shell.loop()
 
         # Start tornado event loop
-        IO_loop = tornado.ioloop.IOLoop.instance()
         IO_loop.start()
     except KeyboardInterrupt:
         trace_shell.shutdown()

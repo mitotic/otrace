@@ -26,6 +26,7 @@ import os.path
 import uuid
 
 import tornado.auth
+import tornado.gen
 import tornado.escape
 import tornado.ioloop
 import tornado.options
@@ -392,13 +393,16 @@ def main():
     app.listen(options.port)
     print "chat_websock: Listening on %s:%s" % (options.addr, options.port)
 
+    IO_loop = tornado.ioloop.IOLoop.instance()
     trace_shell = otrace.OShell(locals_dict=locals(), globals_dict=globals(), allow_unsafe=True,
                                 web_interface=TraceInterface,
-                                init_file="chat_websock.trc", new_thread=True)
+                                init_file="chat_websock.trc", new_thread=True,
+                                hold_wrapper=tornado.gen.Task,
+                                eventloop_callback=IO_loop.add_callback)
 
     try:
         trace_shell.loop()
-        tornado.ioloop.IOLoop.instance().start()
+        IO_loop.start()
     except KeyboardInterrupt:
         trace_shell.shutdown()
 
