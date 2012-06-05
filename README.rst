@@ -143,7 +143,7 @@ parameters; | denotes alternatives)::
  edit [-f] (filename|class[.method]) [< readfile]  # Edit/patch file/method/function
  exec python_code          # Execute python code (also !<python_code>)
  help [command|*]          # Display help information
- ls [-a] [-l] [-t] [-v] [-(.|..|.baseclass)] [pathname1|*]   # List pathname values (or all pathnames in current "directory")
+ ls [-acflmtv] [-(.|..|.baseclass)] [pathname1|*]   # List pathname values (or all pathnames in current "directory")
  pr python_expression      # Print value of expression (DEFAULT COMMAND)
  pwd                       # Print current working "directory"
  quit                      # Quit shell
