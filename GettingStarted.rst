@@ -10,16 +10,19 @@ included in the distribution.
 Installation
 ==============================
 
-Download the latest version of the *otrace* zip archive. The unzipped
-archive should contain the following files (and perhaps more):
+Download the latest version of the *otrace* 
+`zip archive <https://github.com/mitotic/otrace/zipball/master>`_.
+The unzipped archive should contain the following files (and perhaps more):
 
-   ``hello_trace.py otrace.py README.rst setup.py``
+   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py``
 
 All the code for the *otrace* module is contained in a single file,
 ``otrace.py``. To use it without installing it, just ensure that it is 
 present in the module load path. If you wish to install *otrace*, type:
 
-  ``python setup.py``
+  ``python setup.py install``
+
+(On python 2.5, you will also need to install ``ordereddict.py``.)
 
 help, cd, ls, and view commands
 ====================================================
