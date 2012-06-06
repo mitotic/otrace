@@ -52,8 +52,8 @@ is triggered when a user enters the number *77* in the form::
   tornademos$ ./torna_trace.py
   Listening on port 8888
     ***otrace object shell (v0.30)*** (type 'help' for info)
-  globals> set tracing_active True
-  tracing_active = True
+  globals> set trace_active True
+  trace_active = True
   > rootW path=/?number=1
   rootW path=/?number=77
   GetHandler.get:hd-hold_check:21-06-24 
@@ -71,7 +71,7 @@ is triggered when a user enters the number *77* in the form::
   globals>
 
 Note that we need to activate tracing explicitly by setting parameter
-``tracing_active`` to True to trace ``traceassert`` calls. (This step
+``trace_active`` to True to trace ``traceassert`` calls. (This step
 not needed when the ``trace`` command is used for tracing, because
 tracing is automatically activated.)
 

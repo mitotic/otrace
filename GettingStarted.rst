@@ -260,13 +260,13 @@ as well as the diagnostic ``print`` statement, via the ``edit`` command.)::
   osh..__trc> cd ~~g
   globals> set safe_mode False
   safe_mode = False
-  globals> set tracing_active True
-  tracing_active = True
+  globals> set trace_active True
+  trace_active = True
   globals> edit GetHandler.respond
   Patched GetHandler.respond:
 
 Note that we need to activate tracing explicitly by setting parameter
-``tracing_active`` to True to trace ``traceassert`` calls. (This step
+``trace_active`` to True to trace ``traceassert`` calls. (This step
 not needed when the ``trace`` command is used, because tracing is
 automatically activated.)
 After the edit, the statement ``traceassert(number > 0.001, label="num_check")``
