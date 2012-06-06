@@ -1133,7 +1133,7 @@ set parameter ""          # Clear parameter value
 PARAMETERS""",
 
 "tag":
-"""tag [(object|.) [tag_str]]    # Tag object for tracing""",
+"""tag [(object|.) [tag_str|id|time]]    # Tag object for tracing (default tag: id(object))""",
 
 "trace":
 """trace [-a (break|debug|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key)   # Enable tracing for class/method/key on matching condition
@@ -1142,11 +1142,12 @@ PARAMETERS""",
      break => stop until resume command
      debug => start pdb
      hold => asynchronously hold this request (if supported)
-     tag => tag the self object
+     tag => tag self argument on method return using a string describing matched trace conditions
 -c call|return|all|tag|comma_sep_arg_match_conditions   Condition to match for tracing:
      call => before function call,
      return => after function return,
      all => before call and and after return,
+     tagged[argname] => match if any (or argname) argument has a tag
      argname1.comp1==value1,argname2!=value2,... => on argument value match (values with commas/spaces must be quoted; the special argument name 'return' may also be used)
 -n +/-count   If count > 0, stop tracing after count matches; if count > 0, start tracing after -count matches
 """,
@@ -2097,7 +2098,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             trace_name = ""
             trace_call = False
             trace_return = False
-            match_tag = False
+            match_tag = ""
             argmatch = {}
             access_type = ""
             fullname = ""
@@ -2200,8 +2201,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                             access_type = trace_condition
                         else:
                             return (out_str, "Invalid trace access type: " + trace_condition)
-                    elif trace_condition == "tag":
-                        match_tag = True
+                    elif trace_condition.startswith("tagged"):
+                        match_tag = trace_condition[6:] if len(trace_condition) > 6 else "*"
                     elif trace_condition == "call":
                         trace_call = True
                     elif trace_condition == "return":
@@ -3066,7 +3067,7 @@ class TraceOpts(object):
     """Trace match options
     """
     def __init__(self, trace_name, argmatch={}, break_count=-1, trace_call=False, trace_return=False,
-                 break_action=None, match_tag=False, access_type=""):
+                 break_action=None, match_tag="", access_type=""):
         self.trace_name = trace_name
         self.argmatch = argmatch
         self.break_count = break_count
@@ -3077,7 +3078,11 @@ class TraceOpts(object):
         self.access_type = access_type
 
     def __str__(self):
-        condition = self.argmatch or self.access_type or ("tag" if self.match_tag
+        if self.match_tag:
+            taglabel = "tagged" if self.match_tag == "*" else "tagged"+self.match_tag
+        else:
+            taglabel = ""
+        condition = self.argmatch or self.access_type or ( taglabel if taglabel
                         else ("all" if self.trace_call and self.trace_return
                           else ("call" if self.trace_call
                             else ("return" if self.trace_return else "") ) ) )
@@ -3545,7 +3550,7 @@ class OTrace(object):
 
     @classmethod
     def add_trace(cls, method=None, parent=None, argmatch={}, break_count=-1, trace_call=False,
-                  trace_return=False, break_action=None, match_tag=False, access_type=""):
+                  trace_return=False, break_action=None, match_tag="", access_type=""):
         """To trace all, method = "*"
         To list all methods traced, method = None
         To trace class, method="classname." or classname
@@ -4044,7 +4049,7 @@ class OTrace(object):
 
     @classmethod
     def check_trace_match(cls, fn, fullmethodname, self_arg, arg_dict, trace_dict=None,
-                          break_action=None, on_return=False, return_value=None, match_tag=False):
+                          break_action=None, on_return=False, return_value=None, match_tag=""):
         """ Trace dict example:
         {"arg1": "value1", "self.arg2": "value2", "arg3":{"entry31": "value31", "entry32","value32"},
         "arg4!=": "value4", "return": "retvalue"}
@@ -4064,11 +4069,21 @@ class OTrace(object):
             trace_matched = True     # Assume match unless it turns out otherwise
             matched_list = []
             if match_tag:
-                trace_tag = getattr(self_arg, cls.trace_tag_attr, None)
-                if trace_tag:
-                    matched_list = ["tag;%s" % trace_tag.split(":")[1]]
+                if match_tag == "*":
+                    # Check all arguments for tags
+                    check_args = arg_dict.items()
                 else:
-                    trace_matched = False
+                    # Check single argument for tag
+                    check_args = [(match_tag, arg_dict[match_tag])] if match_tag in argdict else []
+
+                trace_matched = False
+                for arg_name, arg_value in check_args:
+                    trace_tag = getattr(arg_value, cls.trace_tag_attr, None)
+                    if trace_tag:
+                        # Argument is tagged; matched
+                        trace_matched = True
+                        matched_list = ["tag%s;%s" % (arg_name, trace_tag.split(":")[1])]
+                        break
             elif not trace_dict:
                 # Default match (no matching attributes specified)
                 pass
@@ -4202,7 +4217,7 @@ class OTrace(object):
         info.return_match_dict = None
 
         info.trace_context, info.trace_id, info.related_id = None, None, None
-        trace_call, trace_return, break_action, match_tag = (False, False, None, False)
+        trace_call, trace_return, break_action, match_tag = (False, False, None, "")
 
         if cls.trace_all:
             # Match any name
