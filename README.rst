@@ -155,7 +155,6 @@ parameters; | denotes alternatives)::
  set [parameter [value]]   # Set (or display) parameter
  tag [(object|.) [tag_str]]    # Tag object for tracing
  trace [-a (break|debug|hold|tag)] -c [call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|key_path|:<label>|log:<str>)   # Enable tracing for class/method/key/label/log on matching condition
- tracing [on|off]          # Enable/disable tracing
  unpatch class[.method]|* [> savefile]  # Unpatch method (and save patch to file)
  untag [object|.]          # untag object
  untrace [class.][method]  # Disable tracing for class/method

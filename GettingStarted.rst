@@ -43,7 +43,7 @@ the prompt ">"). The ``help`` command displays all the available *oshell* comman
   Commands:
   alias   cd      cdls    del     dn      edit    exec    help    ls      popd   
   pr      pushd   pwd     quit    read    repeat  resume  rm      save    set    
-  swapd   tag     trace   tracing unpatch untag   untrace up      view   
+  swapd   tag     trace   unpatch untag   untrace up      view   
 
   If you omit the command, "pr" is assumed.
   Use TAB key for command completion.
@@ -122,6 +122,35 @@ We can examine the source code for the ``respond`` method using the
      # Compute reciprocal of number
      response = "The reciprocal of %s is %s" % (number, 1.0/number)
      return response
+
+pr and exec commands
+=========================================================
+
+The ``pr`` command prints out the value of a python expression. It is
+the default command, and is assumed if no command is recognized. So
+python expressions can usually be evaluated directly::
+
+  > pwd
+  /osh/globals
+  > pr Request_stats
+  {'count': 0, 'path': ''}
+  > Request_stats["count"]
+  0
+  > set safe_mode False
+  safe_mode = False
+  > abs(Request_stats["count"] - 1)
+  1
+
+To prevent inadvertent modification of a running program through
+function calls, parentheses are not allowed in ``pr`` expressions by default.
+Setting the ``safe_mode`` parameter to ``False`` allows their use.
+
+The ``exec`` command executes a python statement,
+like *assignment* or *import*. The prefix *!* may be used instead
+of ``exec``. ``safe_mode`` must be ``False`` to use ``exec``::
+
+  > !Request_stats["count"] = 2
+
 
 trace command
 ===============================================
@@ -224,18 +253,24 @@ We suspect that the exception is caused because the user entered a
 number that was too small. First, we switch off *safe mode*, which
 disallows code editing. We then use the ``edit`` command to modify
 the ``respond`` method in the running program to insert a
-call to ``traceasset``. (Actually ``hello_trace.py`` already has a
+call to ``traceassert``. (Actually ``hello_trace.py`` already has a
 ``traceassert`` call that is commented out. We simply uncomment it,
 as well as the diagnostic ``print`` statement, via the ``edit`` command.)::
 
   osh..__trc> cd ~~g
-  globals> set safe_mode false
+  globals> set safe_mode False
   safe_mode = False
+  globals> set tracing_active True
+  tracing_active = True
   globals> edit GetHandler.respond
   Patched GetHandler.respond:
 
-Now the call ``traceassert(number > 0.001, label="num_check")`` has been
-inserted into ``GetHandler.respond``. In the browser, enter the number
+Note that we need to activate tracing explicitly by setting parameter
+``tracing_active`` to True to trace ``traceassert`` calls. (This step
+not needed when the ``trace`` command is used, because tracing is
+automatically activated.)
+After the edit, the statement ``traceassert(number > 0.001, label="num_check")``
+has been inserted into ``GetHandler.respond``. In the browser, enter the number
 2 and then the number 0.0005. The latter value triggers a false
 condition on the ``traceassert``. We switch to the assert trace
 context directory ``/osh/recent/asserts/GetHandler.respond/as-num_check/23-40-13``,
@@ -277,7 +312,8 @@ The ``untrace`` command can be used to switch off tracing::
   GetHandler.respond
   globals> untrace GetHandler.respond
   untraced GetHandler.respond
-  globals> 
+  globals>
+
 
 Monitoring using the repeat command
 =========================================================

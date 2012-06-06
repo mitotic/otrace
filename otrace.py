@@ -287,6 +287,7 @@ Help_params["repeat_interval"] = "Command repeat interval (sec)"
 Help_params["safe_mode"]     = "Safe mode (disable code modification and execution)"
 Help_params["save_tags"]     = "Automatically save all tag contexts"
 Help_params["trace_related"] = "Automatically trace calls related to tagged objects"
+Help_params["tracing_active"]= "Activate tracing (can be used to force/suppress tracing)"
 
 Set_params = {}
 Set_params["allow_xml"]  = True
@@ -300,6 +301,7 @@ Set_params["repeat_interval"] = 0.2
 Set_params["safe_mode"]  = True
 Set_params["save_tags"]  = False
 Set_params["trace_related"] = False
+Set_params["tracing_active"]= False
 
 Trace_rlock = threading.RLock()
 
@@ -1148,12 +1150,6 @@ PARAMETERS""",
      argname1.comp1==value1,argname2!=value2,... => on argument value match (values with commas/spaces must be quoted; the special argument name 'return' may also be used)
 -n +/-count   If count > 0, stop tracing after count matches; if count > 0, start tracing after -count matches
 """,
-
-"tracing":
-"""tracing [on|off|clear]    # Enable/disable/clear all tracing
-
-Disabling preserves trace settings for later enabling.
-Clearing deletes all trace settings.""",
 
 "unpatch":
 """unpatch class[.method]|* [> savefile]  # Unpatch method (and save patch to file)
@@ -2453,20 +2449,6 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         pass
             return (out_str, err_str)
 
-        elif cmd == "tracing":
-            if not comps:
-                out_str = "Tracing active" if OTrace.trace_active else "Tracing inactive"
-            elif comps[0].lower() == "on":
-                OTrace.enable_trace()
-                out_str = "Enabled tracing"
-            elif comps[0].lower() == "clear":
-                OTrace.clear_trace()
-                out_str = "Cleared tracing"
-            else:
-                OTrace.disable_trace()
-                out_str = "Disabled tracing"
-            return (out_str, err_str)
-
         elif cmd == "read":
             if not comps:
                 err_str = "No filename to read!"
@@ -2924,8 +2906,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if "\n" in rem_line or "\r" in rem_line:
                 err_str = "Line breaks are not permitted in expressions"
 
-            elif Set_params["safe_mode"] and ("(" in rem_line or "=" in rem_line):
-                err_str = "Open parenthesis and equals sign are not permitted in expressions in safe mode; set safe_mode False"
+            elif Set_params["safe_mode"] and "(" in rem_line:
+                err_str = "Open parenthesis is not permitted in expressions in safe mode; set safe_mode False"
             else:
                 if batch:
                     out_str, err_str = self.push(rem_line, batch=True)
@@ -3501,8 +3483,7 @@ class OTrace(object):
     trace_names = {}
     trace_keys = {}
 
-    trace_active = False
-    trace_all    = False
+    trace_all = False
 
     def __new__(cls, *args, **kwargs):
         raise OTraceException("Class cannot be instantiated")
@@ -3585,7 +3566,7 @@ class OTrace(object):
                     trace_names_list.insert(0, "*")
                 return trace_names_list
 
-            cls.trace_active = True
+            Set_params["tracing_active"] = True
 
             if argmatch:
                 if "return" in argmatch:
@@ -3624,11 +3605,15 @@ class OTrace(object):
 
     @classmethod
     def remove_trace(cls, method=None, parent=None):
-        """To remove all trace, omit argument.
+        """To remove all traces, specify method = "all".
         Returns full name of method untraced, or null string
         """
         if not method:
-            return ""
+            raise OTraceException("Specify name to untrace or 'all'")
+
+        if method == "all":
+            cls.clear_trace()
+            return "Cleared all tracing"
 
         with Trace_rlock:
             untrace_name = ""
@@ -3666,7 +3651,7 @@ class OTrace(object):
 
             if (not cls.trace_id_set and not cls.trace_all and
                 not cls.trace_names and not cls.trace_keys):
-                cls.trace_active = False
+                Set_params["tracing_active"] = False
 
             return retvalue or untrace_name
 
@@ -3704,29 +3689,15 @@ class OTrace(object):
 
             if (not cls.trace_id_set and not cls.trace_all and
                 cls.trace_names and not cls.trace_keys):
-                cls.trace_active = False
-
-    @classmethod
-    def enable_trace(cls):
-        """Enable tracing
-        """
-        with Trace_rlock:
-            cls.trace_active = True
-
-    @classmethod
-    def disable_trace(cls):
-        """Disable tracing
-        """
-        with Trace_rlock:
-            cls.trace_active = False
+                Set_params["tracing_active"] = False
 
     @classmethod
     def clear_trace(cls):
         """Clear all tracing
         """
         with Trace_rlock:
-            cls.trace_active = False
-            cls.trace_all    = False
+            Set_params["tracing_active"] = False
+            cls.trace_all = False
 
             cls.trace_id_set.clear()
             cls.trace_names.clear()
@@ -3748,7 +3719,7 @@ class OTrace(object):
     def tracereturn(cls, return_value):
         """Handles tracing of return values
         """
-        if not cls.trace_active:
+        if not Set_params["tracing_active"]:
             return
 
         # Get caller's frame
@@ -3789,7 +3760,7 @@ class OTrace(object):
             # Asserted condition is true; if "hold" action, schedule immediate callback
             return cls.hold_wrapper(schedule_callback) if action == "hold" and cls.hold_wrapper else None
 
-        if not cls.trace_active:
+        if not Set_params["tracing_active"]:
             assert condition, label
             return
 
@@ -4192,7 +4163,7 @@ class OTrace(object):
     def trace_function_call(cls, info, *args, **kwargs):
         """Auxiliary method used by wrapper in trace_function
         """
-        if not cls.trace_active:
+        if not Set_params["tracing_active"]:
             return info.fn(*args, **kwargs)
 
         argcount = len(info.argnames)
@@ -4535,7 +4506,7 @@ class OTrace(object):
 
         @functools.wraps(fn)
         def wrapped(*args, **kwargs):
-            if not cls.trace_active:
+            if not Set_params["tracing_active"]:
                 return fn(*args, **kwargs)
             return cls.trace_function_call(info, *args, **kwargs)
         # Save original function
