@@ -294,6 +294,11 @@ which allows us to examine the local variables when the assertion failed::
 The default action when the traceassert condition is false is to
 create the trace context directory. The ``action`` argument to
 ``traceassert`` can be used set a breakpoint when the assertion fails.
+For efficiency, the trace context for ``traceassert`` does not save the
+backtrace stack local variables or source code information by default.
+To enable backtracing of stack and source code, ``set assert_context``
+to a non-zero value.
+
 
 unpatch and untrace
 =========================================================
