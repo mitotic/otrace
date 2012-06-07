@@ -58,22 +58,8 @@ class GetHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.wfile.write(Page_template % "")
         else:
             # Process user input and display response
-            self.wfile.write(Page_template % self.respond(number))
-
-    def respond(self, number):
-        # Respond to request by processing user input
-        number = float(number)
-
-        # Diagnostic print (initially commented out)
-        ##if number <= 0.001:
-        ##    print "Client address", self.client_address
-
-        # Trace assertion (initially commented out)
-        ##traceassert(number > 0.001, label="num_check")
-
-        # Compute reciprocal of number
-        response = "The reciprocal of %s is %s" % (number, 1.0/number)
-        return response
+            recv = Receive(number)
+            self.wfile.write(Page_template % recv.respond(self))
 
     def log_message(self, format, *args):
         # Suppress server logging
@@ -81,6 +67,24 @@ class GetHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 class MultiThreadedServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
     pass
+
+class Receive(object):
+    def __init__(self, value):
+        self.value = float(value)
+
+    def respond(self, request):
+        # Respond to request by computing reciprocal and returning response string
+
+        # Diagnostic print (initially commented out)
+        ##if self.value <= 0.001:
+        ##    print "Client address", request.client_address
+
+        # Trace assertion (initially commented out)
+        ##traceassert(self.value > 0.001, label="num_check")
+
+        # Compute reciprocal of number
+        response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
+        return response
 
 if __name__ == "__main__":
     http_addr = "127.0.0.1"

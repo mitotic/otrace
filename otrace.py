@@ -36,7 +36,7 @@
 Installation
 ============
 
-Ensure that ``basetrace.py`` and ``otrace.py`` are in the python module load path.
+Ensure that ``otrace.py`` is in the python module load path.
 (For python 2.6 or earlier, you will also need ``ordereddict.py``.) 
 
 Usage
@@ -193,8 +193,6 @@ import types
 import urllib
 import weakref
 
-import basetrace
-
 # Save terminal attributes before using readline
 # (Need this to restore terminal attributes after abnormal exit from oshell thread)
 import termios
@@ -252,7 +250,7 @@ TRACE_INFO = "__trc"
 DOWN_STACK = "__down"
 UP_STACK = "__up"
 SHOW_HIDDEN = set(["__call__", TRACE_INFO, DOWN_STACK, UP_STACK])
-IGNORE_FUNCNAMES = set(["trace_function_call", "wrapped"])
+IGNORE_FUNCNAMES = set(["otrace_function_call", "otrace_wrapped"])
  
 EXEC_PREFIX = "!"
 
@@ -285,25 +283,31 @@ Help_params["log_format"]    = "Format for log messages"
 Help_params["log_level"]     = "Logging level (10=>DEBUG, 20=>INFO, 30=>WARNING ...; see logging module)"
 Help_params["log_remote"]    = "IP address or domain (:port) for remote logging (default port: 9020)"
 Help_params["log_truncate"]  = "No. of characters to display for log messages (default: 72)"
+Help_params["max_recent"]    = "Maximum number of entries to keep in /osh/recent"
 Help_params["osh_bin"]       = "Path to prepend to $PATH to override 'ls' etc. (can be set to 'osh_bin')"
 Help_params["repeat_interval"] = "Command repeat interval (sec)"
 Help_params["safe_mode"]     = "Safe mode (disable code modification and execution)"
 Help_params["save_tags"]     = "Automatically save all tag contexts"
-Help_params["trace_related"] = "Automatically trace calls related to tagged objects"
 Help_params["trace_active"]  = "Activate tracing (can be used to force/suppress tracing)"
+Help_params["trace_related"] = "Automatically trace calls related to tagged objects"
 
 Set_params = {}
-Set_params["allow_xml"]  = True
+Set_params["allow_xml"]    = True
 Set_params["append_traceback"] = False
 Set_params["assert_context"]   = 0
-Set_params["editor"]     = ""
-Set_params["exec_lock"]  = False
-Set_params["max_recent"] = 10
-Set_params["osh_bin"]    = ""
+Set_params["editor"]       = ""
+Set_params["exec_lock"]    = False
+Set_params["log_format"]   = None # placeholder
+Set_params["log_level"]    = None # placeholder
+Set_params["log_remote"]   = None # placeholder
+Set_params["log_truncate"] = None # placeholder
+Set_params["max_recent"]   = 10
+Set_params["osh_bin"]      = ""
 Set_params["repeat_interval"] = 0.2
-Set_params["safe_mode"]  = True
-Set_params["save_tags"]  = False
-Set_params["trace_related"] = False
+Set_params["safe_mode"]    = True
+Set_params["save_tags"]    = False
+Set_params["trace_active"] = None # placeholder
+Set_params["trace_related"]= False
 
 Trace_rlock = threading.RLock()
 
@@ -443,6 +447,25 @@ def format_traceback(exc_info=None):
    finally:
        tblist = tb = None
    return "".join(fmtlist)
+
+def get_naked_function(method):
+    """Return function object associated with a method."""
+    if inspect.isfunction(method):
+        return method
+    return getattr(method, "__func__", None)
+
+def ismethod_or_function(method):
+    return inspect.isfunction(get_naked_function(method))
+
+def get_method_type(parent_cls, method):
+    """Return 'instancemethod'/'classmethod'/'staticmethod' """
+    # Get class attribute directly
+    attr_value = parent_cls.__dict__[method.__name__]
+    if inspect.isfunction(attr_value):
+        # Undecorated function => instance method
+        return "instancemethod"
+    # Decorated function; return type
+    return type(attr_value).__name__
 
 class OTraceException(Exception):
     pass
@@ -1116,7 +1139,7 @@ PARAMETERS""",
 """tag [(object|.) [tag_str|id|time]]    # Tag object for tracing (default tag: id(object))""",
 
 "trace":
-"""trace [-a (break|debug|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key)   # Enable tracing for class/method/key on matching condition
+"""trace [-a (break|debug|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key|*)   # Enable tracing for class/method/key on matching condition
 
 -a break|debug|hold|tag   Action to be taken when trace condition is satisfied:
      break => stop until resume command
@@ -1142,7 +1165,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 """untag [object|.]          # untag object""",
 
 "untrace":
-"""untrace [class.][method]  # Disable tracing for class/method""",
+"""untrace ([class.][method]|*|all)  # Disable tracing for class/method""",
 
 "up":
 """up                        # Command alias to move up stack frames in a trace context""",
@@ -1387,6 +1410,12 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             cmd_keys = self.commands.keys()
             cmd_keys.sort()
             self._completion_list = [s for s in cmd_keys if s and s.startswith(text)]
+
+        elif cmd == "set" and len(comps) == 2:
+            # Complete parameter name
+            tem_list = [key for key in Set_params if key.startswith(prefix)]
+            tem_list.sort()
+            self._completion_list = [x[len(prefix)-len(text):] for x in tem_list]
 
         elif PATH_SEP not in prefix and prefix.find("..") == -1 and self.get_base_subdir() in (GLOBALS_DIR, LOCALS_DIR):
             # Complete object name for relative path in globals/locals
@@ -2213,13 +2242,13 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 with Trace_rlock:
                     # Setup tracing
                     if inspect.isclass(trace_value):
-                        OTrace.trace_class(trace_value)
-                    elif inspect.isclass(parent_obj):
+                        OTrace.trace_entity(trace_value)
+                    elif inspect.isclass(parent_obj) and inspect.ismethod(trace_value):
                         OTrace.trace_method(parent_obj, trace_value)
-                    elif inspect.ismodule(parent_obj):
-                        OTrace.trace_modfunc(parent_obj, trace_value)
+                    elif inspect.ismodule(parent_obj) and inspect.isfunction(trace_value):
+                        OTrace.trace_modulefunction(parent_obj, trace_value)
                     elif not isinstance(trace_value, basestring):
-                        return (out_str, "Cannot trace %s" % trace_value)
+                        return (out_str, "Cannot trace %s" % type(trace_value))
 
                     fullname = OTrace.add_trace(trace_value, parent=parent_obj, argmatch=argmatch,
                                                 trace_call=trace_call, trace_return=trace_return,
@@ -2234,7 +2263,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if comps:
                 trace_name = comps[0]
                 parent_obj = None
-                if trace_name == "*" or trace_name[0] == TRACE_LABEL_PREFIX or trace_name.startswith(TRACE_LOG_PREFIX):
+                if trace_name in ("all", "*") or trace_name[0] == TRACE_LABEL_PREFIX or trace_name.startswith(TRACE_LOG_PREFIX):
                     trace_value = trace_name
                 else:
                     path_list = trace_name.split(".")
@@ -2242,7 +2271,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     if len(path_list) > 1:
                         parent_obj = self.get_subdir(self.locals_dict, path_list[:-1], value=True)
                     else:
-                        parent_obj = self.get_parent_value()
+                        parent_obj = self.get_cur_value()
 
                 if trace_value is None:
                     return (out_str, "Invalid class/method for untracing: " + str(trace_name))
@@ -2250,11 +2279,11 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 with Trace_rlock:
                     # Remove tracing
                     if inspect.isclass(trace_value):
-                        OTrace.trace_class(trace_value, unwrap=True)
+                        OTrace.trace_entity(trace_value, unwrap=True)
                     elif inspect.isclass(parent_obj):
                         OTrace.trace_method(parent_obj, trace_value, unwrap=True)
                     elif inspect.ismodule(parent_obj):
-                        OTrace.trace_modfunc(parent_obj, trace_value, unwrap=True)
+                        OTrace.trace_modulefunction(parent_obj, trace_value, unwrap=True)
                     elif not isinstance(trace_value, basestring):
                         return (out_str, "Cannot untrace %s" % trace_value)
 
@@ -2362,7 +2391,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 if err_str:
                     return (out_str, err_str)
 
-                if not old_obj or basetrace.ismethod_or_function(old_obj):
+                if not old_obj or ismethod_or_function(old_obj):
                     # Patch single function/method
                     if (len(patch_locals) != 1 or patch_locals.keys()[0] != basename):
                         return (out_str, "Error: patch file must contain only 'def %s', but found %s" % (basename, patch_locals))
@@ -2412,7 +2441,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
                 out_str = "Unpatching"
                 for patch_name, unpatch_obj in unpatch_items:
-                    if basetrace.ismethod_or_function(unpatch_obj):
+                    if ismethod_or_function(unpatch_obj):
                         # Unpatch single function/method
                         if OTrace.monkey_unpatch(unpatch_obj):
                             out_str += " " + patch_name
@@ -2421,7 +2450,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     else:
                         # Unpatch class
                         out_str += " " + patch_name + ":"
-                        for name, method_obj in inspect.getmembers(unpatch_obj, basetrace.ismethod_or_function):
+                        for name, method_obj in inspect.getmembers(unpatch_obj, ismethod_or_function):
                             if OTrace.monkey_unpatch(method_obj):
                                 out_str += " " + method_obj.__name__
                     try:
@@ -3425,11 +3454,30 @@ class HtmlWrapper(object):
     def wrap(self, html, msg_type=""):
         return html
             
-class OTrace(basetrace.BaseTrace):
+class FunctionInfo(object):
+    """ Return object containing information about a function"""
+    def __init__(self, function, classname="", modulename="", methodtype=""):
+        self.fn = function
+        self.classname = classname
+        self.modulename = modulename
+        self.methodtype = methodtype
+
+        func_code = function.func_code
+        func_defaults = function.func_defaults
+        argcount = func_code.co_argcount
+        self.argnames = func_code.co_varnames[:argcount]
+        if func_defaults:
+            self.argdefs = dict(zip(self.argnames[-len(func_defaults):], func_defaults))
+        else:
+            self.argdefs = {}
+
+class OTrace(object):
     """Object tracing class.
     All methods are class methods
     Class cannot be instantiated.
     """
+    class_trace_attr = "_otrace_class_trace"
+    orig_function_attr = "_otrace_orig_function"
     unpatched_function_attr = "_otrace_unpatched_function"
     patch_parent_attr = "_otrace_patch_parent"
     patch_source_attr = "_otrace_patch_source"
@@ -3471,6 +3519,7 @@ class OTrace(basetrace.BaseTrace):
     trace_keys = {}
 
     trace_all = False
+    trace_active = False
 
     def __new__(cls, *args, **kwargs):
         raise OTraceException("Class cannot be instantiated")
@@ -3556,9 +3605,10 @@ class OTrace(basetrace.BaseTrace):
             cls.trace_active = True
 
             if argmatch:
-                if "return" in argmatch:
+                ret_match = [key == "return" or key.startswith("return.") for key in argmatch]
+                if any(ret_match):
                     trace_return = True
-                if len(argmatch) > 1 or "return" not in argmatch:
+                if break_action != "tag" and not all(ret_match):
                     trace_call = True
 
             if method == "*":
@@ -3600,7 +3650,7 @@ class OTrace(basetrace.BaseTrace):
 
         if method == "all":
             cls.clear_trace()
-            return "Cleared all tracing"
+            return "all tracing"
 
         with Trace_rlock:
             untrace_name = ""
@@ -4044,7 +4094,7 @@ class OTrace(basetrace.BaseTrace):
         no new context id is created.
         """
         if isinstance(trace_dict, dict):
-            if not on_return and len(trace_dict) == 1 and trace_dict.keys()[0] == "return":
+            if not on_return and trace_dict and all(key == "return" or key.startswith("return.") for key in trace_dict):
                 # No match (match only on return)
                 return (None, "", "")
 
@@ -4056,7 +4106,7 @@ class OTrace(basetrace.BaseTrace):
                     check_args = arg_dict.items()
                 else:
                     # Check single argument for tag
-                    check_args = [(match_tag, arg_dict[match_tag])] if match_tag in argdict else []
+                    check_args = [(match_tag, arg_dict[match_tag])] if match_tag in arg_dict else []
 
                 trace_matched = False
                 for arg_name, arg_value in check_args:
@@ -4157,7 +4207,7 @@ class OTrace(basetrace.BaseTrace):
         return (None, "", related_id)
 
     @classmethod
-    def trace_function_call(cls, info, *args, **kwargs):
+    def otrace_function_call(cls, info, *args, **kwargs):
         """Auxiliary method used by wrapper in trace_function
         """
         if not cls.trace_active:
@@ -4222,9 +4272,11 @@ class OTrace(basetrace.BaseTrace):
                 elif class_match:
                     # Class name match; check for trace id match only upon return
                     info.return_match_dict = trace_opts.argmatch
-                elif trace_opts.argmatch and "return" in trace_opts.argmatch:
+                elif trace_opts.argmatch:
                     # Check for return value match, if requested
-                    info.return_match_dict = {"return": trace_opts.argmatch.get("return")}
+                    ret_argmatch = [(key, value) for key, value in trace_opts.argmatch.items() if key == "return" or key.startswith("return.")]
+                    if ret_argmatch:
+                        info.return_match_dict = dict(ret_argmatch)
             
             if match_tag or (not class_match and trace_opts.trace_call):
                 # Check for trace_id or related_id match on argument values
@@ -4466,6 +4518,113 @@ class OTrace(basetrace.BaseTrace):
                 exception_flag = True
 
     @classmethod
+    def trace_function(cls, function, classname="", modulename="", methodtype="", unwrap=False):
+        """Wrap function for tracing. (If unwrap, unwrap function.)
+        classname is the name of the class for instance/class/static methods.
+        methodtype = "" (function) or "instancemethod" or "classmethod" or "staticmethod"
+        """
+        if hasattr(function, cls.orig_function_attr):
+            if unwrap:
+                # Unwrap function (return original function)
+                orig_function = getattr(function, cls.orig_function_attr)
+                delattr(function, cls.orig_function_attr)
+                return orig_function
+            else:
+                # Function already wrapped; do nothing
+                return function
+        elif unwrap:
+            # Function not wrapped; do nothing
+            return function
+
+        func_info = FunctionInfo(function, classname=classname, modulename=modulename, methodtype=methodtype)
+        @functools.wraps(function)
+        def otrace_wrapped(*args, **kwargs):
+            if not cls.trace_active:
+                return function(*args, **kwargs)
+            return cls.otrace_function_call(func_info, *args, **kwargs)
+
+        # Save original function
+        setattr(otrace_wrapped, cls.orig_function_attr, function)
+        return otrace_wrapped
+
+    @classmethod
+    def trace_method(cls, parent_cls, method, modulename="", unwrap=False):
+        """Trace a method in a class"""
+        methodtype = get_method_type(parent_cls, method)
+
+        methodname = method.__name__
+        if methodname.startswith("__") and not methodname.endswith("__"):
+            # Unmangle private class name
+            methodname = "_" + parent_cls.__name__ + methodname
+
+        if methodname not in ("__str__", "__repr__"):
+            # Non-stringifying method; trace it
+            new_function = cls.trace_function(get_naked_function(method), classname=parent_cls.__name__,
+                                              modulename=modulename, methodtype=methodtype, unwrap=unwrap)
+            if methodtype == "classmethod":
+                new_function = classmethod(new_function)
+            elif methodtype == "staticmethod":
+                new_function = staticmethod(new_function)
+
+            setattr(parent_cls, methodname, new_function)
+
+        return getattr(parent_cls, methodname)
+
+    @classmethod
+    def trace_modulefunction(cls, mod, function, unwrap=False):
+        """Trace function in module"""
+        setattr(mod, function.__name__, cls.trace_function(function, modulename=mod.__name__, unwrap=unwrap))
+
+    @classmethod
+    def trace_entity(cls, entity, exclude=[], include=[], modulename="", unwrap=False):
+        """ Trace an entity (which may be a module or a class)
+        All members are traced recursively, except for members in the the exclude list,
+        unless include list is specified, in which case only included members are traced.
+        """
+        if inspect.isclass(entity):
+            # Trace only methods in class
+            if unwrap:
+                if hasattr(entity, cls.class_trace_attr):
+                    delattr(entity, cls.class_trace_attr)
+            else:
+                setattr(entity, cls.class_trace_attr, True)
+
+            members = inspect.getmembers(entity, ismethod_or_function)
+
+            # Only trace immediate class methods (not parent class methods)
+            members = [(name, member) for name, member in members if name in entity.__dict__]
+
+        elif inspect.ismodule(entity):
+            # Trace functions and classes in module
+            modulename = entity.__name__
+            members = inspect.getmembers(entity, inspect.isfunction)
+            members += inspect.getmembers(entity, inspect.isclass)
+
+        if include:
+            trace_set = set(include)
+        else:
+            trace_set = set(x[0] for x in members)
+            for name in exclude:
+                trace_set.discard(name)
+
+        trace_list = []
+        for name, member in members:
+            if name not in trace_set:
+                continue
+            trace_list.append(name)
+            if inspect.isclass(entity):
+                # Trace method in class
+                cls.trace_method(entity, member, modulename=modulename, unwrap=unwrap)
+            elif inspect.isfunction(member):
+                # Trace function in module
+                cls.trace_modulefunction(entity, member, unwrap=unwrap)
+            else:
+                # Trace class in module
+                cls.trace_entity(member, modulename=modulename, unwrap=unwrap)
+
+        return trace_list
+            
+    @classmethod
     def web_hook(cls, op_type, path, data):
         # Must be thread-safe (OK if output only)
         if not OShell.instance:
@@ -4603,7 +4762,7 @@ class OTrace(basetrace.BaseTrace):
                 methodtype = ""
                 mname = method.__name__
                 if inspect.isclass(parent):
-                    methodtype = basetrace.get_method_type(parent, method)
+                    methodtype = get_method_type(parent, method)
                     if mname.startswith("__") and not mname.endswith("__"):
                         # Private class name; unmangle
                         mname = "_%s%s" % (parent.__name__, mname)
@@ -4655,7 +4814,7 @@ class OTrace(basetrace.BaseTrace):
             methodtype = ""
             mname = method.__name__
             if inspect.isclass(parent):
-                methodtype = basetrace.get_method_type(parent, method)
+                methodtype = get_method_type(parent, method)
                 if mname.startswith("__") and not mname.endswith("__"):
                     # Private class name; unmangle
                     mname = "_%s%s" % (parent.__name__, mname)
@@ -4676,7 +4835,7 @@ class OTrace(basetrace.BaseTrace):
                     delattr(parent, mname)
 
                 # Remove original method and patch source attributes (no need for this?)
-                func = basetrace.get_naked_function(method)
+                func = get_naked_function(method)
                 delattr(func, cls.unpatched_function_attr)
                 delattr(func, cls.patch_source_attr)
                 delattr(func, cls.patch_parent_attr)
@@ -4781,7 +4940,7 @@ if __name__ == "__main__":
     print glob_dict["gvar"]
     print loc_dict["gvar"]
 
-    OTrace.trace_class(TestClass)
+    OTrace.trace_entity(TestClass)
 
     OTrace.add_trace()
 

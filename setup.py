@@ -2,7 +2,7 @@
 
 from distutils.core import setup
 
-py_modules = ["basetrace", "otrace"]
+py_modules = ["otrace"]
 
 try:
     from collections import OrderedDict
