@@ -13,18 +13,18 @@ Download the latest version of the *otrace*
 `zip archive <https://github.com/mitotic/otrace/zipball/master>`_.
 The unzipped archive should contain the following files (and perhaps more):
 
-   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py``
+   ``hello_test.osh hello_trace.py ordereddict.py otrace.py README.rst setup.py``
 
-All the code for the *otrace* module is contained in one file,
+All the code for the *otrace* module is contained in a single file,
 ``otrace.py``. (For python 2.6 or earlier, you will also need
- ``ordereddict.py``.)  To use *otrace* without installing it, just
+``ordereddict.py``.)  To use *otrace* without installing it, just
 ensure that these files are  present in the module load path.
 If you wish to install *otrace*, use:
 
    ``python setup.py install``
 
 
-help, cd, ls, and view commands
+Demo program
 ====================================================
 
 ``hello_trace.py`` is a simple multi-threaded web server using the
@@ -32,6 +32,14 @@ help, cd, ls, and view commands
 form where the user inputs a number and the server displays the
 reciprocal of the number. Inputting a zero value will raise an exception,
 which will be used to illustrate the capabilities of *otrace*.
+
+All the *oshell* commands used below are available in the script
+``hello_test.osh``. Once you are comfortable with the steps in
+this tutorial, you can re-run the entire tutorial using the command
+``read ~~w/hello_test.osh``
+
+help, cd, ls, and view commands
+====================================================
 
 Run ``hello_trace.py`` from the command line (user input appears after
 the prompt ">"). The ``help`` command displays all the available *oshell* commands::
@@ -77,51 +85,55 @@ contains three classes, ``GetHandler, MultiThreadedServer, and OShell``::
 
   > ls
   BaseHTTPServer      GetHandler          MultiThreadedServer OShell             
-  Page_template       Request_stats       SocketServer        http_addr          
-  http_port           http_server         logging             sys                
-  test_fun            trace_shell         traceassert         urlparse           
+  Page_template       Receive             Request_stats       SocketServer       
+  http_addr           http_port           http_server         logging            
+  send                sleep               sys                 test_fun           
+  trace_shell         traceassert         urlparse           
   > ls -c
-  GetHandler          MultiThreadedServer OShell             
+  GetHandler          MultiThreadedServer OShell              Receive            
+
 
 The ``cd`` command is used to change directories. Switching to the
 directory of class ``GetHandler``, we note that it supports several methods, many of which
 are inherited::
 
   > cd GetHandler
-  osh..GetHandler> pwd
-  /osh/globals/GetHandler
   osh..GetHandler> ls -f
-  address_string       date_time_string     do_GET              
-  end_headers          finish               handle              
-  handle_one_request   log_date_time_string log_error           
-  log_message          log_request          parse_request       
-  respond              send_error           send_header         
-  send_response        setup                version_string      
+  address_string       date_time_string     do_GET               end_headers         
+  finish               handle               handle_one_request   log_date_time_string
+  log_error            log_message          log_request          parse_request       
+  send_error           send_header          send_response        setup               
+  version_string      
+
 
 The ``ls`` options *-..* can be used to exclude inherited attributes
-of a class, and we note that ``GetHandler`` has two methods of its own::
+of a class, and we note that ``GetHandler`` has just one method of its own::
 
   osh..GetHandler> ls -f -..
-  do_GET  respond
+  do_GET
 
-We can examine the source code for the ``respond`` method using the
+We can examine the source code for the ``Receive.respond`` method using the
 ``view`` command with the *-i* (inline-display) option::
 
- osh..GetHandler> view -i respond
- def respond(self, number):
-     # Respond to request by processing user input
-     number = float(number)
+  osh..GetHandler> cd ..
+  globals> cd Receive
+  osh..Receive> ls
+  respond
+  osh..Receive> view -i respond
+  def respond(self, request):
+      # Respond to request by computing reciprocal and returning response string
+  
+      # Diagnostic print (initially commented out)
+      ##if self.value <= 0.001:
+      ##    print "Client address", request.client_address
+  
+      # Trace assertion (initially commented out)
+      ##traceassert(self.value > 0.001, label="num_check")
+  
+      # Compute reciprocal of number
+      response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
+      return response
 
-     # Diagnostic print (initially commented out)
-     ##if number <= 0.001:
-     ##    print "Client address", self.client_address
-
-     # Trace assertion (initially commented out)
-     ##traceassert(number > 0.001, label="num_check")
-
-     # Compute reciprocal of number
-     response = "The reciprocal of %s is %s" % (number, 1.0/number)
-     return response
 
 pr and exec commands
 =========================================================
@@ -167,70 +179,75 @@ Without any arguments, the ``trace`` command displays currently traced names.
 Next, we initiate tracing on the ``respond`` method  using the
 ``trace`` command::
 
-  osh..GetHandler> trace respond
-  Tracing GetHandler.respond
-  osh..GetHandler> trace
-  GetHandler.respond
+  globals> cd ~~g
+  globals> cd Receive
+  osh..Receive> trace respond
+  Tracing Receive.respond
+  osh..Receive> trace
+  Receive.respond
 
-Now we load the URL *http://localhost:8888* in the browser, and enter
-the number 3 followed by the number zero in the input form. A log message
-is generated for each value, and the zero value triggers a
-``ZeroDivisionError`` exception in the ``respond`` method.
-In the exception backtrace shown below, note the additional methods ``wrapped``
-and ``trace_function_call`` between ``do_GET`` and ``respond``. These
-are inserted by ``otrace`` for tracing::
+Now we are ready to load the URL *http://localhost:8888* in the
+browser,  and enter numbers. Instead of using the browser, in
+this demo we will use the function ``submit`` that simulates browser
+input from the user. The command "submit(22)" would be equivalent
+to the user entering 22. A log message is generated for each value, and the
+zero input value triggers a ``ZeroDivisionError`` exception in the
+``respond`` method. In the exception backtrace shown below, note
+the additional methods ``otrace_wrapped`` and
+``otrace_function_call`` between ``do_GET`` and ``respond``.
+These are inserted by ``otrace`` for tracing::
 
+  osh..Receive> submit(3)
   rootW path=/?number=3
+    <span>The reciprocal of 3.0 is 0.333333333333</span>
+  osh..Receive> submit(0)
   rootW path=/?number=0
-  GetHandler.respond:ex-ZeroDivisionError:23-01-33
+  Receive.respond:ex-ZeroDivisionError:05-08-45 
   ----------------------------------------
-  Exception happened during processing of request from ('127.0.0.1', 59872)
+  Exception happened during processing of request from ('127.0.0.1', 62006)
   Traceback (most recent call last):
-    ...
-    File "./hello_trace.py", line 61, in do_GET
-      self.wfile.write(Page_template % self.respond(number))
-    File "/Users/rsarava/app4/repo/meldr-hg/otrace/otrace.py", line 4535, in wrapped
-      return cls.trace_function_call(info, *args, **kwargs)
-    File "/Users/rsarava/app4/repo/meldr-hg/otrace/otrace.py", line 4289, in trace_function_call
+   ...
+    File "./hello_trace.py", line 62, in do_GET
+      self.wfile.write(Page_template % recv.respond(self))
+    File "/Users/rsarava/app4/repo/mitotic/otrace/otrace.py", line 4555, in otrace_wrapped
+      return cls.otrace_function_call(func_info, *args, **kwargs)
+    File "/Users/rsarava/app4/repo/mitotic/otrace/otrace.py", line 4327, in otrace_function_call
       return_value = info.fn(*args, **kwargs)
-    File "./hello_trace.py", line 71, in respond
-      response = "The reciprocal of %s is %s" % (number, 1.0/number)
+    File "./hello_trace.py", line 86, in respond
+      response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
   ZeroDivisionError: float division by zero
   ----------------------------------------
  
 When a trace condition occurs, like an exception in a traced function or method, a trace id
-``GetHandler.respond:ex-ZeroDivisionError:23-01-33`` is generated and displayed,
+``GetHandler.respond:ex-ZeroDivisionError:05-08-45`` is generated and displayed,
 as shown above. Also, the default action of the ``trace`` command is
 to create a new virtual directory
-``/osh/recent/exceptions/GetHandler.respond/ex-ZeroDivisionError/23-01-33``
+``/osh/recent/exceptions/GetHandler.respond/ex-ZeroDivisionError/05-08-45``
 to hold the *trace context* for the event. The shorthand notation
 **~~** can be used  to display the most recent *trace context*::
 
-  > ls ~~
-  /osh/recent/exceptions/GetHandler.respond/ex-ZeroDivisionError/23-01-33
-  > cd ~~
-  GetHandler..01-33> pwd
-  /osh/recent/exceptions/GetHandler.respond/ex-ZeroDivisionError/23-01-33
+  osh..Receive> ls ~~
+  /osh/recent/exceptions/Receive.respond/ex-ZeroDivisionError/05-08-45
+  osh..Receive> cd ~~
 
 The trace context contains information about the function like
 argument values and the call stack.::
 
-  GetHandler..01-33> ls
-  __down __trc  number self  
-  GetHandler..01-33> ls -l
-  __down = {path_comps, __trc, __up, __down, number, self, query_args}
-  __trc  = {exc_context, thread, framestack, frame, related, funcname, context, exc_stack, where, id, argvalues}
-  number = 0.0
-  self   = <__main__.GetHandler instance at 0x108a34d88>
-  GetHandler..01-33> cd __trc
+  Receive..08-45> ls
+  __down  __trc   request self   
+  Receive..08-45> ls -l
+  __down  = {path_comps, __trc, __up, __down, number, self, recv, query_args}
+  __trc   = {exc_context, thread, framestack, frame, related, funcname, context, exc_stack, where, id, argvalues}
+  request = <__main__.GetHandler instance at 0x106760fc8>
+  self    = <__main__.Receive object at 0x1068cb090>
+  Receive..08-45> cd __trc
   osh..__trc> ls
-  argvalues   context     exc_context exc_stack   frame       framestack 
-  funcname    id          related     thread      where      
+  argvalues   context     exc_context exc_stack   frame       framestack  funcname   
+  id          related     thread      where      
   osh..__trc> ls -l where
-  where =  '__bootstrap-->__bootstrap_inner-->run-->process_request_thread-->
-  finish_request-->__init__-->handle-->handle_one_request-->do_GET-->respond'
-  osh..__trc> 
-  
+  where =
+  '__bootstrap-->__bootstrap_inner-->run-->process_request_thread-->finish_request-->__init__-->handle-->handle_one_request-->do_GET-->respond'
+
 
 edit and traceassert
 =========================================================
@@ -262,34 +279,40 @@ as well as the diagnostic ``print`` statement, via the ``edit`` command.)::
   safe_mode = False
   globals> set trace_active True
   trace_active = True
-  globals> edit GetHandler.respond
-  Patched GetHandler.respond:
+  globals> edit Receive.respond
+  Patched Receive.respond:
 
 Note that we need to activate tracing explicitly by setting parameter
 ``trace_active`` to True to trace ``traceassert`` calls. (This step
 not needed when the ``trace`` command is used, because tracing is
 automatically activated.)
 After the edit, the statement ``traceassert(number > 0.001, label="num_check")``
-has been inserted into ``GetHandler.respond``. In the browser, enter the number
+has been inserted into ``Receive.respond``. In the browser, enter the number
 2 and then the number 0.0005. The latter value triggers a false
 condition on the ``traceassert``. We switch to the assert trace
-context directory ``/osh/recent/asserts/GetHandler.respond/as-num_check/23-40-13``,
+context directory ``/osh/recent/asserts/Receive.respond/as-num_check/04-57-54``,
 which allows us to examine the local variables when the assertion failed::
 
+  globals> submit(2)
   rootW path=/?number=2
+    <span>The reciprocal of 2.0 is 0.5</span>
+  globals> submit(0.0005)
   rootW path=/?number=0.0005
-  Client address ('127.0.0.1', 64211)
-  GetHandler.respond:as-num_check:23-40-13 
-
-  > ls ~~
-  /osh/recent/asserts/GetHandler.respond/as-num_check/23-40-13
-  > cd ~~
-  GetHandler..40-13> ls
-  __down __trc  number self  
-  GetHandler..40-13> self.headers["User-Agent"]
-  Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/534.55.3 (KHTML, like Gecko) Version/5.1.5 Safari/534.55.3
-  GetHandler..40-13> self.client_address
-  ('127.0.0.1', 64211)
+  Client address ('127.0.0.1', 62008)
+  Receive.respond:as-num_check:05-08-51 
+    <span>The reciprocal of 0.0005 is 2000.0</span>
+  globals> ls ~~
+  /osh/recent/asserts/Receive.respond/as-num_check/05-08-51
+  globals> cd ~~
+  Receive..08-51> ls
+  __down  __trc   request self   
+  Receive..08-51> self.value
+  0.0005
+  Receive..08-51> request.headers
+  Accept-Encoding: identity
+  Host: 127.0.0.1:8888
+  Connection: close
+  User-Agent: Python-urllib/2.7
 
 The default action when the traceassert condition is false is to
 create the trace context directory. The ``action`` argument to
@@ -304,19 +327,19 @@ unpatch and untrace
 =========================================================
 
 After debugging is complete, the ``unpatch`` command can be used to
-restore  the original code for ``GetHandler.respond``. 
+restore  the original code for ``Receive.respond``. 
 The ``untrace`` command can be used to switch off tracing::
 
   globals> cd /osh/patches
   patches> ls
-  GetHandler.respond
-  patches> unpatch GetHandler.respond
-  Unpatching GetHandler.respond
+  Receive.respond
+  patches> unpatch Receive.respond
+  Unpatching Receive.respond
   patches> cd ~~g
   patches> trace
-  GetHandler.respond
-  globals> untrace GetHandler.respond
-  untraced GetHandler.respond
+  Receive.respond
+  globals> untrace Receive.respond
+  untraced Receive.respond
   globals>
 
 

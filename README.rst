@@ -15,11 +15,11 @@ Download the latest version of the *otrace*
 `zip archive <https://github.com/mitotic/otrace/zipball/master>`_.
 The unzipped archive should contain the following files (and perhaps more):
 
-   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py``
+   ``hello_test.osh hello_trace.py ordereddict.py otrace.py README.rst setup.py``
 
-All the code for the *otrace* module is contained in one file,
+All the code for the *otrace* module is contained in a single file,
 ``otrace.py``. (For python 2.6 or earlier, you will also need
- ``ordereddict.py``.)  To use *otrace* without installing it, just
+``ordereddict.py``.)  To use *otrace* without installing it, just
 ensure that these files are  present in the module load path.
 If you wish to install *otrace*, use:
 
@@ -155,10 +155,10 @@ parameters; | denotes alternatives)::
  save [trace_id1..]        # Save current or specified trace context
  set [parameter [value]]   # Set (or display) parameter
  tag [(object|.) [tag_str]]    # Tag object for tracing
- trace [-a (break|debug|hold|tag)] -c [call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|key_path|:<label>|log:<str>)   # Enable tracing for class/method/key/label/log on matching condition
+ trace [-a (break|debug|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key|*)   # Enable tracing for class/method/key on matching condition
  unpatch class[.method]|* [> savefile]  # Unpatch method (and save patch to file)
  untag [object|.]          # untag object
- untrace [class.][method]  # Disable tracing for class/method
+ untrace ([class.][method]|*|all)  # Disable tracing for class/method
  up                        # Command alias to move up stack frames in a trace context
  view [-d] [-i] [class/method/file]  # Display source/doc for objects/traces/files
 

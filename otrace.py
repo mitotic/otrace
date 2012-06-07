@@ -1853,17 +1853,23 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         if cmd in self.aliases:
             # Substitute for alias in command line
             new_comps = []
+            clear_comps = False
             for arg in self.aliases[cmd]:
                 s = "\\*"
                 if s in arg:
-                    arg.replace(s, " ".join(comps))
+                    arg = arg.replace(s, " ".join(comps))
+                    clear_comps = True
                 for j, comp in enumerate(comps):
                     s = "\\"+str(j+1)
                     if s in arg:
-                        s.replace(s, comp)
+                        arg = arg.replace(s, comp)
+                        clear_comps = True
                 new_comps.append(arg)
             if not new_comps:
                 return "", "Error in alias: "+cmd
+            if clear_comps:
+                comps = []
+                rem_line = ""
             cmd = new_comps.pop(0)
             if new_comps:
                 rem_line = " ".join(new_comps) + " " + rem_line
@@ -2463,7 +2469,12 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if not comps:
                 err_str = "No filename to read!"
             else:
-                err_str = self.read_file(comps[0])
+                filename = expanduser(comps[0])
+                if not filename.startswith(PATH_SEP):
+                    return (out_str, "Must specify absolute pathname for input file %s" % filename)
+                if not os.path.exists(filename):
+                    return (out_str, "Input file %s not found" % filename)
+                err_str = self.read_file(filename)
             return (out_str, err_str)
 
         elif cmd in ("resume", "save", "del"):

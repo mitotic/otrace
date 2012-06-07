@@ -1,0 +1,96 @@
+# Demo osh script for hello_trace.py
+
+# Allow executiion etc.
+set safe_mode false
+
+# msg display + user input alias
+!import sys
+alias msg exec sys.stdout.write('"\*"'); sys.stdin.readline() and '""'
+
+# sleep alias
+!from time import sleep
+alias slp exec sleep(5)
+
+msg Demo script is ready, press ENTER to proceed:
+
+##############################################
+"help, cd, ls, and view commands"
+
+help
+help pwd
+
+ls
+
+ls -c
+
+cd GetHandler
+
+ls -f
+
+ls -f -..
+
+cd ..
+
+cd Receive
+ls
+view -i respond
+
+##############################################
+"pr and exec commands"
+
+cd ~~g
+pwd
+pr Request_stats
+
+Request_stats["count"]
+set safe_mode False
+abs(Request_stats["count"] - 1)
+
+!Request_stats["count"] = 2
+
+##############################################
+"trace command"
+
+cd ~~g
+cd Receive
+trace respond
+trace
+
+submit(3)
+submit(0)
+
+ls ~~
+cd ~~
+ls
+ls -l
+cd __trc
+ls
+ls -l where
+
+"edit and traceassert"
+cd ~~g
+set trace_active True
+
+msg When ready to edit method Receive.respond, press ENTER to proceed:
+
+edit Receive.respond
+
+submit(2)
+submit(0.0005)
+
+ls ~~
+cd ~~
+ls
+self.value
+request.headers
+
+##############################################
+"unpatch and untrace"
+
+cd /osh/patches
+ls
+unpatch Receive.respond
+cd ~~g
+trace
+untrace Receive.respond
+

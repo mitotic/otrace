@@ -90,6 +90,15 @@ if __name__ == "__main__":
     http_addr = "127.0.0.1"
     http_port = 8888
 
+    def submit(number):
+        """Simulate user form submission"""
+        import urllib2
+        try:
+            response = urllib2.urlopen("http://%s:%s/?number=%s" % (http_addr, http_port, number))
+            return "\n".join(response.read().split("\n")[-4:-3])
+        except Exception, excp:
+            return excp.reason if isinstance(excp, urllib2.URLError) else str(excp)
+
     # HTTP server
     http_server = MultiThreadedServer((http_addr, http_port), GetHandler)
     print >> sys.stderr, "Listening on %s:%s" % (http_addr, http_port)
