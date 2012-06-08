@@ -3,6 +3,7 @@
 # hello_trace.py: demo application for otrace to compute reciprocal of a number
 
 import BaseHTTPServer
+import copy
 import logging
 import SocketServer
 import sys
@@ -98,6 +99,9 @@ class Receive(object):
         # Compute reciprocal of number
         response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
         return response
+
+    def __deepcopy__(self, memo):
+        return self.__class__(copy.deepcopy(self.value, memo))
 
 if __name__ == "__main__":
     http_addr = "127.0.0.1"

@@ -35,9 +35,8 @@ simple wildcarding are supported.
 
 This README file provides a brief introduction to *otrace*. A tutorial
 using a demo program is available in
-`GettingStarted.rst <https://github.com/mitotic/otrace/blob/master/docs/GettingStarted.rst>`_
-Additional documentation will be made available on the
-project home page,
+`docs/GettingStarted.rst <http://info.mindmeldr.com/code/otrace/otrace-getting-started>`_
+Additional documentation will be made available on the project home page,
 `info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
 
 Installation
@@ -47,7 +46,7 @@ Download the latest version of the *otrace*
 `zip archive <https://github.com/mitotic/otrace/zipball/master>`_.
 The unzipped archive should contain the following files (and some more):
 
-   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py``
+   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py ...``
 
 All the code for the *otrace* module is contained in a single file,
 ``otrace.py``. (For python 2.6 or earlier, you will also need

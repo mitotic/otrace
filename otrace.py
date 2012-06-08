@@ -168,8 +168,9 @@ from __future__ import with_statement
 
 import cgi
 import cgitb
-import collections
 import codeop
+import collections
+import copy
 import datetime
 import functools
 import inspect
@@ -277,6 +278,7 @@ Help_params = OrderedDict()
 Help_params["allow_xml"]     = "Allow output markup for display in browser (if supported)"
 Help_params["append_traceback"] = "Append traceback information to exceptions"
 Help_params["assert_context"]= "No. of lines of context retrieved for traceassert (0 for efficiency)"
+Help_params["deep_copy"]     = "Create deep copies of arguments and local variables for 'snapshots'"
 Help_params["editor"]        = "Editor to use for editing patches or viewing source"
 Help_params["exec_lock"]     = "Execute code within re-entrant lock"
 Help_params["log_format"]    = "Format for log messages"
@@ -295,6 +297,7 @@ Set_params = {}
 Set_params["allow_xml"]    = True
 Set_params["append_traceback"] = False
 Set_params["assert_context"]   = 0
+Set_params["deep_copy"]    = False
 Set_params["editor"]       = ""
 Set_params["exec_lock"]    = False
 Set_params["log_format"]   = None # placeholder
@@ -4071,7 +4074,7 @@ class OTrace(object):
                 # Get local variables and arguments for frame (always for last frame)
                 args, varargs, varkw, locals_dict = inspect.getargvalues(frameobj)
                 # Copy locals_dict (just to be safe in avoiding cyclic references)
-                locals_dict = TraceDict(locals_dict.copy())
+                locals_dict = TraceDict(cls.copy_or_not(locals_dict, split=True))
                 locals_dict.set_trc("argvalues", (args, varargs, varkw) )
             else:
                 # Do not save copy of local variables
@@ -4199,7 +4202,9 @@ class OTrace(object):
                     context_type = "holds"
                 else:
                     context_type = "traces"
-                locals_dict = TraceDict(arg_dict.copy())
+
+                # Copy args dict, cloning if need be
+                locals_dict = TraceDict(cls.copy_or_not(arg_dict, split=True))
                 locals_dict.set_trc("stack", LineList(traceback.format_stack()[:-3]))
                 locals_dict.set_trc("func", fn)
                 trace_context, trace_id = cls.create_context(fullmethodname, self_arg, locals_dict,
@@ -4228,12 +4233,43 @@ class OTrace(object):
         return (None, "", related_id)
 
     @classmethod
+    def copy_or_not(cls, obj, split=False, keep_self=True):
+        """Return deepcopy of obj if deep_copy parameter is set and obj has attribute
+        __deepcopy__ or is a (dict,list,set,tuple) else just return obj
+        If split, process list or dict values individually and re-group them,
+        creating at atleast a shallow copy of the list/dict in the process.
+        If keep_self (default), keep original self, and store copy as self_copy
+        """
+        if not Set_params["deep_copy"]:
+            return obj
+
+        if not split:
+            if hasattr(obj, "__deepcopy__") or isinstance(obj, (dict,list,set,tuple)):
+                return copy.deepcopy(obj)
+            else:
+                return obj
+
+        if isinstance(obj, list):
+            return map(cls.copy_or_not, obj)
+
+        if isinstance(obj, dict):
+            obj_copy = dict( zip(obj.keys(), map(cls.copy_or_not, obj.values())) )
+            if keep_self and "self" in obj and obj_copy["self"] is not obj["self"]:
+                # Keep original self and store copy as self_copy
+                obj_copy["self_copy"] = obj_copy["self"]
+                obj_copy["self"] = obj["self"]
+            return obj_copy
+
+        raise Exception("Unable to split %s" % type(obj))
+
+    @classmethod
     def otrace_function_call(cls, info, *args, **kwargs):
         """Auxiliary method used by wrapper in trace_function
         """
         if not cls.trace_active:
             return info.fn(*args, **kwargs)
 
+        # Collect arguments
         argcount = len(info.argnames)
         args_pairs = zip(info.argnames, args)
         kwargs_pairs = kwargs.items()
@@ -4323,7 +4359,7 @@ class OTrace(object):
         if info.call_display:
             # Display call name trace
             cls.callback_handler.callback(info.trace_id, info.methodtype, info.modulename, info.classname, info.fn.__name__, info.arg_val_pairs, info.nameless_args_list)
-            if break_action == "break":
+            if break_action in ("break", "debug"):
                 cls.break_flow(info.trace_id, oshell=(OShell.instance if break_action == "break" else None))
 
         if not trace_opts:

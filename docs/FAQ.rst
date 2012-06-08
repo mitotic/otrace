@@ -37,6 +37,17 @@ It appears to work when ported using the ``2to3`` tool, but no real testing
 has been done. 
 
 
+Does *otrace* create true "snapshots" of variables?
+======================================================
+
+No. For efficiency, by default, *otrace* retains only a "shallow copy" of the
+dictionary  containing arguments and/or local variables. Entities in
+this shallow copy could change their value as execution progresses.
+The parameter ``deep_copy`` can be set to force *otrace* to retain
+deep copies of built-in object types and classes that implement the
+``__deepcopy__`` hook.
+
+
 Is there a graphical front-end to *otrace*?
 ============================================
 

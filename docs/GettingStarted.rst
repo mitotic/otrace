@@ -13,7 +13,7 @@ Download the latest version of the *otrace*
 `zip archive <https://github.com/mitotic/otrace/zipball/master>`_.
 The unzipped archive should contain the following files (and some more):
 
-   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py``
+   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py ...``
 
 All the code for the *otrace* module is contained in a single file,
 ``otrace.py``. (For python 2.6 or earlier, you will also need
