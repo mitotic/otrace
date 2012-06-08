@@ -35,7 +35,7 @@ simple wildcarding are supported.
 
 This README file provides a brief introduction to *otrace*. A tutorial
 using a demo program is available in
-`GettingStarted.rst <https://github.com/mitotic/otrace/blob/master/GettingStarted.rst>`_
+`GettingStarted.rst <https://github.com/mitotic/otrace/blob/master/docs/GettingStarted.rst>`_
 Additional documentation will be made available on the
 project home page,
 `info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
