@@ -3,8 +3,40 @@ otrace: An object-oriented tracing tool for nonlinear debugging
 .. sectnum::
 .. contents::
 
-This README file provides a brief introduction to *otrace*.
-Additional documentation and other information can be found on the
+Introduction
+=============================
+
+*otrace* is an object-oriented tracing tool for nonlinear debugging
+of asynchronous or multithreaded interactive programs. It addresses
+some of the limitations of sequential debugging techniques which
+do not work well with server programs, where multiple requests are
+handled in parallel. For example, instrumenting web servers with
+print/logging statements can often result in voluminous log output
+with interleaved streams of messages.
+
+*otrace* takes a different approach to debugging that relies less on
+sequential operations. Its features including taking "snapshots"
+of variables for tracing, "tagging" objects for tracking across
+different method invocations, and modifying live code
+("monkey patching") to insert print statements etc.
+
+*otrace* maps all the objects in the running program, as well as the
+"snapshot" objects, to a virtual filesystem mounted under ``/osh``.
+It provides a shell-like interface, *oshell*, with commands like
+*cd*, *ls* etc. that can be used to browse classes, methods, and
+instance variables in the virtual filesystem. Tab completion and
+simple wildcarding are supported.
+
+*otrace* may be used as:
+   - a tracing tool for debugging web servers and interactive programs
+   - a console or dashboard for monitoring production servers
+   - a teaching tool for exploring the innards of a program
+   - a code patching tool for unit testing
+
+This README file provides a brief introduction to *otrace*. A tutorial
+using a demo program is available in
+`GettingStarted.rst <https://github.com/mitotic/otrace/blob/master/GettingStarted.rst>`_
+Additional documentation will be made available on the
 project home page,
 `info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
 
@@ -13,9 +45,9 @@ Installation
 
 Download the latest version of the *otrace* 
 `zip archive <https://github.com/mitotic/otrace/zipball/master>`_.
-The unzipped archive should contain the following files (and perhaps more):
+The unzipped archive should contain the following files (and some more):
 
-   ``hello_test.osh hello_trace.py ordereddict.py otrace.py README.rst setup.py``
+   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py``
 
 All the code for the *otrace* module is contained in a single file,
 ``otrace.py``. (For python 2.6 or earlier, you will also need
@@ -28,12 +60,6 @@ If you wish to install *otrace*, use:
 
 Usage
 =================================
-
-*otrace* may be used as:
-   - a tracing tool for debugging web servers and interactive programs
-   - a console or dashboard for monitoring production servers
-   - a teaching tool for exploring the innards of a program
-   - a code patching tool for unit testing
 
 *otrace* does not consume any resources until some tracing action is
 initiated. So it can be included in production code without any
@@ -88,7 +114,7 @@ Here is a simple server example::
    ``TraceCallback``, overriding the methods ``callback`` and ``returnback``
    to implement your own logging  (see ``DefaultCallback`` for a simple example)
 
-Synopsis
+Implementation
 ==========================================
 
 *otrace* uses a *Virtual Directory Shell Interface* which maps all the
@@ -115,8 +141,9 @@ allowing the insertion of ``print`` statements etc. in the running program.
 The ``trace`` command allows dynamic tracing of function or method invocations,
 return values, and exceptions. This is accomplished by
 dynamically *decorating* (or *wrapping*) the function to be traced.
-When a trace condition is satisfied, the function-wrapper saves *context information*, such as
-arguments and return values, in a newly created virtual directory in::
+When a trace condition is satisfied, the function-wrapper saves
+*context information*, such as arguments and return values,
+in a newly created virtual directory in::
 
     /osh/recent/*
 
@@ -130,6 +157,7 @@ determines which of the these two types of commands will be executed.
 If the current working directory is not in ``/osh/*``, the command is
 treated as a standard unix shell command (except for ``cd``, which is
 always handled by *oshell*.)
+
 
 Commands
 =================
@@ -148,12 +176,12 @@ parameters; | denotes alternatives)::
  pr python_expression      # Print value of expression (DEFAULT COMMAND)
  pwd                       # Print current working "directory"
  quit                      # Quit shell
- read filename             # Read input lines from file
  repeat command            # Repeat command till new input is received
  resume [trace_id1..]      # Resume from breakpoint
  rm [-r] [pathname1..]     # Delete entities corresponding to pathnames (if supported)
  save [trace_id1..]        # Save current or specified trace context
  set [parameter [value]]   # Set (or display) parameter
+ source filename           # Read input lines from file
  tag [(object|.) [tag_str]]    # Tag object for tracing
  trace [-a (break|debug|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key|*)   # Enable tracing for class/method/key on matching condition
  unpatch class[.method]|* [> savefile]  # Unpatch method (and save patch to file)
@@ -166,6 +194,13 @@ The default command is ``pr``, which evaluates an expression.  So you
 can simply type a python variable to print out its value. You can also
 insert ``otrace.traceassert(<condition>,label=..,action=..)`` to trace
 assertions.
+
+
+Python 3
+===============================
+
+``otrace.py`` and the demo program ``hello_trace.py`` work with Python
+3, after porting using the ``2to3`` tool. Further testing remains to be done.
 
 
 Caveats

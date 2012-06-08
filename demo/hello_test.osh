@@ -11,32 +11,30 @@ alias msg exec sys.stdout.write('"\*"'); sys.stdin.readline() and '""'
 !from time import sleep
 alias slp exec sleep(5)
 
-msg Demo script is ready, press ENTER to proceed:
+noecho "Demo script is ready"
+noecho msg Press ENTER key to proceed:
 
 ##############################################
-"help, cd, ls, and view commands"
+noecho "*****help, cd, ls, and view commands*****"
 
 help
 help pwd
 
 ls
-
 ls -c
 
 cd GetHandler
-
 ls -f
-
 ls -f -..
 
 cd ..
-
 cd Receive
 ls
 view -i respond
 
 ##############################################
-"pr and exec commands"
+noecho msg Press ENTER key to proceed:
+noecho "*****pr and exec commands*****"
 
 cd ~~g
 pwd
@@ -49,7 +47,8 @@ abs(Request_stats["count"] - 1)
 !Request_stats["count"] = 2
 
 ##############################################
-"trace command"
+noecho msg Press ENTER key to proceed:
+noecho "*****trace command*****"
 
 cd ~~g
 cd Receive
@@ -67,13 +66,13 @@ cd __trc
 ls
 ls -l where
 
-"edit and traceassert"
+##############################################
+noecho msg Press ENTER key to proceed:
+noecho "*****edit and traceassert*****"
 cd ~~g
 set trace_active True
 
-msg When ready to edit method Receive.respond, press ENTER to proceed:
-
-edit Receive.respond
+edit Receive.respond < ~~w/demo/Receive.respond.patch
 
 submit(2)
 submit(0.0005)
@@ -85,7 +84,8 @@ self.value
 request.headers
 
 ##############################################
-"unpatch and untrace"
+noecho msg Press ENTER key to proceed:
+noecho "*****unpatch and untrace*****"
 
 cd /osh/patches
 ls
@@ -93,4 +93,22 @@ unpatch Receive.respond
 cd ~~g
 trace
 untrace Receive.respond
+
+##############################################
+noecho msg Press ENTER key to proceed:
+noecho "*****Object tag tracing*****"
+cd ~~g
+trace -a tag -c self.value==1 Receive.__init__
+trace -c taggedself Receive.respond
+submit(2)
+submit(1)
+cd ~~
+pwd
+ls
+
+trace
+untrace all
+
+noecho "Demo over."
+##############################################
 

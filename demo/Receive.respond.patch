@@ -1,0 +1,13 @@
+def respond(self, request):
+    # Respond to request by computing reciprocal and returning response string
+
+    # Diagnostic print (initially commented out)
+    if self.value <= 0.001:
+        print("Client address", request.client_address)
+
+    # Trace assertion (initially commented out)
+    traceassert(self.value > 0.001, label="num_check")
+
+    # Compute reciprocal of number
+    response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
+    return response

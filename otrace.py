@@ -822,8 +822,12 @@ class TraceConsole(object):
                             line = line[:-1]
                         if line and line[-1] == "\r":
                             line = line[:-1]
-                        # Echo line
-                        self.std_output(prompt+line+"\n")
+
+                        if line.startswith("noecho "):
+                            line = line[len("noecho "):]
+                        else:
+                            # Echo line
+                            self.std_output(prompt+line+"\n")
                     else:
                         if self.no_input:
                             return
@@ -1102,9 +1106,6 @@ The command prefix "pr" may be omitted, and is assumed by default.
 "quit":
 """quit                      # Quit shell""",
 
-"read":
-"""read filename             # Read input lines from file""",
-
 "repeat":
 """repeat command            # Repeat command till new user input is received""",
 
@@ -1123,9 +1124,6 @@ The command prefix "pr" may be omitted, and is assumed by default.
 The trace context is saved to /osh/saved
 """,
 
-"swapd":
-"""swapd                     # Swap current work dir with top of directory stack""",
-
 "set":
 """set [parameter [value]]   # Set (or display) parameter
 
@@ -1134,6 +1132,12 @@ set parameter             # Display current value of parameter
 set parameter ""          # Clear parameter value
 
 PARAMETERS""",
+
+"source":
+"""source filename           # Read commands from file""",
+
+"swapd":
+"""swapd                     # Swap current work dir with top of directory stack""",
 
 "tag":
 """tag [(object|.) [tag_str|id|time]]    # Tag object for tracing (default tag: id(object))""",
@@ -1279,8 +1283,10 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             OTrace.set_web_root( self.web_interface.get_root_tree() )
             self.web_interface.set_web_hook(OTrace.web_hook)
 
-        if self.init_file and os.path.exists(self.init_file):
-            self.stuff_lines( ["read '%s'\n" % self.init_file] )
+        if self.init_file:
+            filename = expanduser(filename if self.init_file.startswith(PATH_SEP) or self.init_file.startswith(NEWCONTEXT_PREFIX) else WORKDIR_PREFIX+PATH_SEP+self.init_file)
+            if os.path.exists(filename):
+                self.stuff_lines( ["source '%s'\n" % filename] )
 
         super(OShell,self).run()
 
@@ -1397,7 +1403,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         else:
             cmd = ""
 
-        prefix = comps[-1] if comps else ""
+        prefix = expanduser(comps[-1]) if comps else ""
         preline = line[:len(line)-len(text)].strip()
 
         if cmd in self.aliases:
@@ -2249,7 +2255,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     # Setup tracing
                     if inspect.isclass(trace_value):
                         OTrace.trace_entity(trace_value)
-                    elif inspect.isclass(parent_obj) and inspect.ismethod(trace_value):
+                    elif inspect.isclass(parent_obj) and (inspect.ismethod(trace_value) or inspect.isfunction(trace_value)):
                         OTrace.trace_method(parent_obj, trace_value)
                     elif inspect.ismodule(parent_obj) and inspect.isfunction(trace_value):
                         OTrace.trace_modulefunction(parent_obj, trace_value)
@@ -2465,7 +2471,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         pass
             return (out_str, err_str)
 
-        elif cmd == "read":
+        elif cmd == "source":
             if not comps:
                 err_str = "No filename to read!"
             else:
@@ -2938,7 +2944,11 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     out_str, err_str = self.push(rem_line, batch=True)
                 else:
                     self.locals_dict["_stdout"] = self._stdout
-                    out_str, err_str = self.push("print >>_stdout, " + rem_line)
+                    if sys.version_info[0] < 3:
+                        pr_command = "print >>_stdout, "+rem_line
+                    else:
+                        pr_command = "print("+rem_line+", file=_stdout)" 
+                    out_str, err_str = self.push(pr_command)
                     del self.locals_dict["_stdout"]
             return (out_str, err_str)
 
@@ -4125,7 +4135,7 @@ class OTrace(object):
                     if trace_tag:
                         # Argument is tagged; matched
                         trace_matched = True
-                        matched_list = ["tag%s;%s" % (arg_name, trace_tag.split(":")[1])]
+                        matched_list = ["tagged%s;%s" % (arg_name, trace_tag.split(":")[1])]
                         break
             elif not trace_dict:
                 # Default match (no matching attributes specified)

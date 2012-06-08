@@ -10,6 +10,17 @@ import urlparse
 
 from otrace import OShell, traceassert
 
+if sys.version_info[0] < 3:
+    def encode(s):
+        return s
+    def decode(s):
+        return s
+else:
+    def encode(s):
+        return s.encode("utf-8")
+    def decode(s):
+        return s.decode("utf-8")
+
 Page_template = """<html>
 <head>
    <title>Hello Trace</title>
@@ -55,11 +66,13 @@ class GetHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         
         if number is None:
             # No user input; display input form
-            self.wfile.write(Page_template % "")
+            resp = Page_template % ""
         else:
             # Process user input and display response
             recv = Receive(number)
-            self.wfile.write(Page_template % recv.respond(self))
+            resp = Page_template % recv.respond(self)
+
+        self.wfile.write(encode(resp))
 
     def log_message(self, format, *args):
         # Suppress server logging
@@ -77,7 +90,7 @@ class Receive(object):
 
         # Diagnostic print (initially commented out)
         ##if self.value <= 0.001:
-        ##    print "Client address", request.client_address
+        ##    print("Client address", request.client_address)
 
         # Trace assertion (initially commented out)
         ##traceassert(self.value > 0.001, label="num_check")
@@ -95,7 +108,7 @@ if __name__ == "__main__":
         import urllib2
         try:
             response = urllib2.urlopen("http://%s:%s/?number=%s" % (http_addr, http_port, number))
-            return "\n".join(response.read().split("\n")[-4:-3])
+            return "\n".join(decode(response.read()).split("\n")[-4:-3])
         except Exception, excp:
             return excp.reason if isinstance(excp, urllib2.URLError) else str(excp)
 

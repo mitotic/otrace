@@ -11,9 +11,9 @@ Installation
 ==============================
 Download the latest version of the *otrace* 
 `zip archive <https://github.com/mitotic/otrace/zipball/master>`_.
-The unzipped archive should contain the following files (and perhaps more):
+The unzipped archive should contain the following files (and some more):
 
-   ``hello_test.osh hello_trace.py ordereddict.py otrace.py README.rst setup.py``
+   ``hello_trace.py ordereddict.py otrace.py README.rst setup.py``
 
 All the code for the *otrace* module is contained in a single file,
 ``otrace.py``. (For python 2.6 or earlier, you will also need
@@ -34,9 +34,9 @@ reciprocal of the number. Inputting a zero value will raise an exception,
 which will be used to illustrate the capabilities of *otrace*.
 
 All the *oshell* commands used below are available in the script
-``hello_test.osh``. Once you are comfortable with the steps in
+``demo/hello_test.osh``. Once you are comfortable with the steps in
 this tutorial, you can re-run the entire tutorial using the command
-``read ~~w/hello_test.osh``
+``source ~~w/demo/hello_test.osh``
 
 help, cd, ls, and view commands
 ====================================================
@@ -341,6 +341,49 @@ The ``untrace`` command can be used to switch off tracing::
   globals> untrace Receive.respond
   untraced Receive.respond
   globals>
+
+
+Object tag tracing
+=========================================================
+
+One of the allowed actions in the ``trace -a <action> -c <condition> ...``
+command is ``tag``. The tag action adds a special attribute to the
+``self`` object if the trace condition is met at the time a function
+returns. The tag attribute is just a string, usually the object's
+``id``, but can also be the current time or some other string.
+The presence of tagged arguments can be specified as a trace condition
+for subsequent tracing of a function, using the ``-c tagged[<argname>]``
+option. The commands ``tag`` and ``untag`` can be used to directly
+add/remove the tag attribute.
+
+In the example below, the method ``Receive.__init__`` will tag the
+``self`` object if ``self.value`` equals 1 when the method returns.
+Then, we trace ``Receive.respond`` if its argument named ``self``
+is tagged. First, we submit the value 2, which does not trigger
+tagging. Next, we submit the value 1, which causes the ``self``
+object to be tagged when ``Receive.__init__`` returns, and
+then triggers a trace context for ``Receive.respond`` because
+one of its arguments is tagged::
+
+  globals> cd ~~g
+  globals> trace -a tag -c self.value==1 Receive.__init__
+  Tracing -a tag -c {'self.value==': 1L} Receive.__init__
+  globals> trace -c taggedself Receive.respond
+  Tracing -c taggedself Receive.respond
+  globals> submit(2)
+  rootW path=/?number=2
+    <span>The reciprocal of 2.0 is 0.5</span>
+  globals> submit(1)
+  rootW path=/?number=1
+  Receive:tg-self.value==1;0x103231090:17-04-42 
+  Receive.respond:tr-taggedself;tg-self.value==1;0x103231090:17-04-42.0 self=<__main__.Receive object at 0x103231090>, request=<__main__.GetHandler instance at 0x10322f950>
+    <span>The reciprocal of 1.0 is 1.0</span>
+  globals> cd ~~
+  Receive..04-42.0> pwd
+  /osh/recent/traces/Receive.respond/tr-taggedself;tg-self.value==1;0x103231090/17-04-42.0
+  Receive..04-42.0> ls
+  __trc   request self   
+
 
 
 Monitoring using the repeat command
