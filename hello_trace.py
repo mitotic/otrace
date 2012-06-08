@@ -7,6 +7,7 @@ import copy
 import logging
 import SocketServer
 import sys
+import traceback
 import urlparse
 
 from otrace import OShell, traceassert
@@ -71,7 +72,11 @@ class GetHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         else:
             # Process user input and display response
             recv = Receive(number)
-            resp = Page_template % recv.respond(self)
+            try:
+                resp = Page_template % recv.respond(self)
+            except Exception, excp:
+                logging.error("ERROR: %s", excp)
+                resp = "Server error:\n" + "".join(traceback.format_exception(*sys.exc_info()))
 
         self.wfile.write(encode(resp))
 
@@ -112,7 +117,8 @@ if __name__ == "__main__":
         import urllib2
         try:
             response = urllib2.urlopen("http://%s:%s/?number=%s" % (http_addr, http_port, number))
-            return "\n".join(decode(response.read()).split("\n")[-4:-3])
+            resp_str = decode(response.read())
+            return "\n".join(resp_str.split("\n")[-4:-3]) if resp_str.startswith("<html>") else resp_str
         except Exception, excp:
             return excp.reason if isinstance(excp, urllib2.URLError) else str(excp)
 

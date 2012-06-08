@@ -202,22 +202,20 @@ These are inserted by ``otrace`` for tracing::
     <span>The reciprocal of 3.0 is 0.333333333333</span>
   osh..Receive> submit(0)
   rootW path=/?number=0
-  Receive.respond:ex-ZeroDivisionError:05-08-45 
-  ----------------------------------------
-  Exception happened during processing of request from ('127.0.0.1', 62006)
+  Receive.respond:ex-ZeroDivisionError:05-08-45
+  rootE ERROR: float division by zero
+  Server error:
   Traceback (most recent call last):
-   ...
-    File "./hello_trace.py", line 62, in do_GET
-      self.wfile.write(Page_template % recv.respond(self))
-    File "/Users/rsarava/app4/repo/mitotic/otrace/otrace.py", line 4555, in otrace_wrapped
+    File "./hello_trace.py", line 76, in do_GET
+      resp = Page_template % recv.respond(self)
+    File "/Users/rsarava/app4/repo/mitotic/otrace/otrace.py", line 4601, in otrace_wrapped
       return cls.otrace_function_call(func_info, *args, **kwargs)
-    File "/Users/rsarava/app4/repo/mitotic/otrace/otrace.py", line 4327, in otrace_function_call
+    File "/Users/rsarava/app4/repo/mitotic/otrace/otrace.py", line 4373, in otrace_function_call
       return_value = info.fn(*args, **kwargs)
-    File "./hello_trace.py", line 86, in respond
+    File "./hello_trace.py", line 104, in respond
       response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
   ZeroDivisionError: float division by zero
-  ----------------------------------------
- 
+
 When a trace condition occurs, like an exception in a traced function or method, a trace id
 ``GetHandler.respond:ex-ZeroDivisionError:05-08-45`` is generated and displayed,
 as shown above. Also, the default action of the ``trace`` command is
