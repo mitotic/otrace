@@ -14,6 +14,16 @@ but you can use the *oshell* ``edit`` and ``view`` commands instead.
 Unix shell aliases may also not work, but you can use *oshell* aliases.
 
 
+Can I use *pdb* with *otrace*?
+===============================================
+
+The ``trace -a <action> -c <condition> <function>`` command allows
+``debug`` as one of the action options. This options switches control
+to ``pdb`` when the trace condition is satisfied. (To return control
+to *otrace*, use the ``continue`` command of ``pdb``.)
+
+
+
 Can *otrace* be used in production code? Is it secure?
 ======================================================
 
@@ -126,6 +136,8 @@ Why isn't TAB completion working for me?
 ===============================================
 
 The GNU ``readline`` module needs to be installed for TAB completion to work.
-(On Mac OS X, the pre-installed ``readline`` module may need to be
-replaced using the ``easy_install readline`` command.)
+On Mac OS X, the pre-installed ``readline`` module may need to be
+replaced using the ``easy_install readline`` command. On Windows,
+use ``easy_install pyreadline`` instead. (``easy_install`` is
+available via the ``setuptools`` package.)
 

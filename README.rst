@@ -33,11 +33,18 @@ simple wildcarding are supported.
    - a teaching tool for exploring the innards of a program
    - a code patching tool for unit testing
 
+
+Support
+=============================
+
 This README file provides a brief introduction to *otrace*. A tutorial
 using a demo program is available in
 `docs/GettingStarted.rst <http://info.mindmeldr.com/code/otrace/otrace-getting-started>`_
 Additional documentation will be made available on the project home page,
 `info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
+
+Report bugs and other problems using Github `Issue Tracker <https://github.com/mitotic/otrace/issues>`_.
+
 
 Installation
 ==============================
