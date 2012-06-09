@@ -196,10 +196,16 @@ import weakref
 
 # Save terminal attributes before using readline
 # (Need this to restore terminal attributes after abnormal exit from oshell thread)
-import termios
-Term_attr = termios.tcgetattr(sys.stdin.fileno())
+try:
+    import termios
+    Term_attr = termios.tcgetattr(sys.stdin.fileno())
+except Exception:
+    Term_attr = None
 
-import readline   # this allows raw_input to handle line editing
+try:
+    import readline   # this allows raw_input to handle line editing
+except Exception:
+    readline = None
 
 
 try:
@@ -222,6 +228,8 @@ REPEAT_COUNT = 10000   # Default repeat count
 # Path separator
 PATH_SEP = "/"
 
+BACKSLASH = "\\"
+
 ENTITY_CHAR = ":"
 
 BASE_DIR = "osh"
@@ -233,7 +241,7 @@ TRACE_OFFSET = 6
 
 ALL_DIR = "all"
 BROWSER_DIR = "browser"
-DATABASE_DIR = "database"
+DATABASE_DIR = "db"
 GLOBALS_DIR = "globals"
 LOCALS_DIR = "locals"
 PATCHES_DIR = "patches"
@@ -320,6 +328,26 @@ class OSDirectory(object):
 
 class AltHandler(Exception):
     pass
+
+def is_absolute_path(path):
+    if path.startswith(PATH_SEP):
+        return True
+    if os.sep == BACKSLASH and re.match(r"[a-zA-Z]:", path):
+        # Windows absolute path
+        return True
+    return False
+
+def os_path(path):
+    """Convert unix-style path to OS path"""
+    if os.sep == BACKSLASH:
+        # Windows path
+        if path.startswith(PATH_SEP):
+            comps = path[1:].split(PATH_SEP)
+            comps[0] = "c:\\" + comps[0]
+        else:
+            comps = path.split(PATH_SEP)
+        path = os.path.join(*comps)
+    return path
 
 def expanduser(filepath):
     if filepath.startswith(GLOBALS_PREFIX):
@@ -576,7 +604,8 @@ class LineList(list):
         return "".join(x if x.endswith("\n") else x+"\n" for x in s)
 
 def setTerminalEcho(enabled):
-    import termios
+    if not Term_attr:
+        return
     fd = sys.stdin.fileno()
     iflag, oflag, cflag, lflag, ispeed, ospeed, cc = termios.tcgetattr(fd)
     if enabled:
@@ -590,9 +619,13 @@ def setTerminalEcho(enabled):
     
 def getTerminalSize():
     """Return (lines:int, cols:int)"""
+    if not Term_attr:
+        return(25, 80)
+
     def ioctl_GWINSZ(fd):
-        import fcntl, termios
+        import fcntl
         return struct.unpack("hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234"))
+
     # Try stdin, stdout, stderr
     for fd in (0, 1, 2):
         try:
@@ -621,6 +654,14 @@ def getTerminalSize():
         pass
     # return default.
     return (25, 80)
+
+def read_password(prompt="Password:"):
+    """Read password, with no echo, from stdin"""
+    setTerminalEcho(False)
+    password = raw_input(prompt)
+    sys.stdout.write("\n")
+    setTerminalEcho(True)
+    return password
 
 def check_for_hold(self_arg):
     """Return callable function if self_arg has a hold, else return None."""
@@ -922,7 +963,8 @@ class TraceConsole(object):
                     pass
 
             # Restore terminal attributes
-            termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, Term_attr)
+            if Term_attr:
+                termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, Term_attr)
 
     def switch_screen(self, logtype=""):
         """Return (prefix, suffix) escape sequences for alt screen switching"""
@@ -1051,7 +1093,7 @@ If not in /osh/*, the default path is the user's home directory (~).
 """del [trace_id1..]         # Delete trace context""",
 
 "dn":
-"""dn                        # Command alias to move down stack frames in a trace context""",
+"""dn                        # Command alias to move one level down in stack frames in a trace context (to a newer frame)""",
 
 "edit":
 """edit [-f] (filename|class[.method]) [< readfile]  # Edit/patch file/method/function
@@ -1070,6 +1112,9 @@ If readfile is specified for input redirection, read text from file to patch cod
 help *                    # Help info on all commands
 help command              # Help info on command
 """,
+
+"lock":
+"""lock                      # Lock terminal until password is entered""",
 
 "ls":
 """ls [-acflmtv] [-(.|..|.baseclass)] [pathname1|*]   # List pathname values (or all pathnames in current "directory")
@@ -1175,7 +1220,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 """untrace ([class.][method]|*|all)  # Disable tracing for class/method""",
 
 "up":
-"""up                        # Command alias to move up stack frames in a trace context""",
+"""up                        # Command alias to move one level up in stack frames in a trace context (to an older frame)""",
 
 "view":
 """view [-d] [-i] [class/method/file]  # Display source/doc using editor for objects/traces/files
@@ -1221,7 +1266,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             _stdin, _stdout, _stder: input, output, error streams
         """
 
-        assert not work_dir or work_dir.startswith(PATH_SEP), "work_dir must be an absolute path"
+        assert not work_dir or is_absolute_path(work_dir), "work_dir must be an absolute path"
 
         super(OShell, self).__init__(globals_dict=globals_dict, locals_dict=locals_dict,
                                      banner=banner, echo_callback=echo_callback,
@@ -1267,8 +1312,9 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         self._completion_list = []
 
         self.update_terminal_size()
-        readline.set_completer(self.completer)
-        readline.parse_and_bind('tab: complete')
+        if readline:
+            readline.set_completer(self.completer)
+            readline.parse_and_bind('tab: complete')
 
     def loop(self):
         """Start run loop for OShell."""
@@ -1287,7 +1333,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             self.web_interface.set_web_hook(OTrace.web_hook)
 
         if self.init_file:
-            filename = expanduser(filename if self.init_file.startswith(PATH_SEP) or self.init_file.startswith(NEWCONTEXT_PREFIX) else WORKDIR_PREFIX+PATH_SEP+self.init_file)
+            filename = expanduser(filename if is_absolute_path(self.init_file) or self.init_file.startswith(NEWCONTEXT_PREFIX) else WORKDIR_PREFIX+PATH_SEP+self.init_file)
             if os.path.exists(filename):
                 self.stuff_lines( ["source '%s'\n" % filename] )
 
@@ -1366,7 +1412,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         Returns null string on success, or error
         """
         try:
-            with open(filename, "r") as f:
+            with open(os_path(filename), "r") as f:
                 self.stuff_lines(f.readlines())
             return ""
         except Exception:
@@ -1381,6 +1427,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
     def completer(self, text, state, line=None, all=False):
         """Handle TAB completion: text is the partial "filename"; return completion list.
         """
+        if not readline:
+            return []
         if state > 0:
             if state < len(self._completion_list):
                 return self._completion_list[state]
@@ -1436,8 +1484,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         else:
             # Complete "directory" name
             path_list = (prefix+"*").split(PATH_SEP)
-            absolute = prefix.startswith(PATH_SEP)
-            if absolute:
+            if is_absolute_path(prefix):
                 offset = 1
                 path_list = path_list[1:]
                 cur_fullpath = []
@@ -1445,7 +1492,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 offset = 0
                 cur_fullpath = self.cur_fullpath
             tem_list = self.path_matches(cur_fullpath, path_list, completion=True)
-            self._completion_list = [x[1:] if x.startswith(PATH_SEP) else x[len(prefix)-len(text)-offset:] for x in tem_list]
+            self._completion_list = [x[1:] if is_absolute_path(x) else x[len(prefix)-len(text)-offset:] for x in tem_list]
             self._completion_list = [x.replace(" ", "\\ ") for x in self._completion_list]
 
         ##print "ABC completer: line='%s', text='%s', preline='%s', state=%d, list: %s" % (line, text, preline, state, self._completion_list)
@@ -1485,7 +1532,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         if not new_dir:
             return PATH_SEP + PATH_SEP.join(cur_path)
 
-        if not new_dir.startswith(PATH_SEP):
+        if not is_absolute_path(new_dir):
             # Relative path
             return new_dir
 
@@ -1629,9 +1676,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         else:
             # Final path component as prompt
             prompt = self.get_leaf_dir()
-            if prompt == DOWN_STACK and self.has_trc("funcname"):
-                prompt = self.get_trc("funcname")
-            elif prompt == UP_STACK and self.has_trc("funcname"):
+            if prompt in (UP_STACK, DOWN_STACK) and self.has_trc("funcname"):
                 prompt = self.get_trc("funcname")
             if self.get_web_path() and len(self.cur_fullpath) > BASE1_OFFSET:
                 self.prompt1 = "web..%s> " % (prompt,)
@@ -1829,6 +1874,12 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             self.break_events[trace_id] = event
 
         if not line.strip():
+            return "", ""
+
+        if line.strip() == "lock":
+            password = read_password("Lock password: ").strip()
+            while password != read_password("Enter password to unlock: ").strip():
+                pass
             return "", ""
 
         if line.lstrip().startswith("repeat "):
@@ -2038,7 +2089,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
                 # Expand filename, substituting for ".." and "~"
                 comp0 = expanduser(comp0)
-                if not comp0.startswith(PATH_SEP):
+                if not is_absolute_path(comp0):
                     # Relative path
                     path_list = comp0.split(PATH_SEP)
                     matches = self.path_matches(self.cur_fullpath, path_list=path_list)
@@ -2070,8 +2121,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 osh_bin = Set_params["osh_bin"]
                 if osh_bin:
                     # Prepend osh_bin to PATH (prepending with cwd, if needed)
-                    if not osh_bin.startswith(PATH_SEP):
-                        osh_bin = os.path.join(os.getcwd(), osh_bin)
+                    if not is_absolute_path(osh_bin):
+                        osh_bin = os.path.join(os.getcwd(), os_path(osh_bin))
                     prev_path = env.get("PATH")
                     if prev_path:
                         env["PATH"] = osh_bin+":"+prev_path
@@ -2088,7 +2139,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     except Exception, excp:
                         exec_context["queue"].put(("", "ERROR in executing '%s': %s" % (line, excp)))
 
-                save_attr = termios.tcgetattr(sys.stdin.fileno())
+                if Term_attr:
+                    save_attr = termios.tcgetattr(sys.stdin.fileno())
                 thrd = threading.Thread(target=execute_in_thread)
                 thrd.start()
                 try:
@@ -2096,7 +2148,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 except Queue.Empty:
                     exec_context["proc"].kill()
                     # Restore terminal attributes
-                    termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, save_attr)
+                    if Term_attr:
+                        termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, save_attr)
                     return ("", "Timed out command execution '%s'" % (line,))
                     
             except Exception, excp:
@@ -2111,6 +2164,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         elif self.get_web_path() and len(self.get_web_path()) >= self.web_interface.root_depth:
             # Non-otrace command; handle using web interface
+            if Set_params["safe_mode"]:
+                return ("", "Javascript console disabled in safe mode; set safe_mode False")
             try:
                 self.web_interface.send_command(self.get_web_path(), line)
                 return ("_NoPrompt_", None)
@@ -2171,10 +2226,6 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 elif trace_name.startswith(DIR_PREFIX[DATABASE_DIR]):
                     tracing_key = True
                     trace_value = trace_name[len(DIR_PREFIX[DATABASE_DIR]):] + PATH_SEP
-
-                elif trace_name.startswith(PATH_SEP):
-                    tracing_key = True
-                    trace_value = trace_name
 
                 elif trace_name == "*" or trace_name[0] == TRACE_LABEL_PREFIX or trace_name.startswith(TRACE_LOG_PREFIX):
                     trace_value = trace_name
@@ -2358,10 +2409,10 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 if redirect_in:
                     # Read patch from file
                     filename = expanduser(redirect_in)
-                    if not filename.startswith(PATH_SEP):
+                    if not is_absolute_path(filename):
                         return (out_str, "Must specify absolute pathname for input file %s" % filename)
                     try:
-                        with open(filename, "r") as patchf:
+                        with open(os_path(filename), "r") as patchf:
                             mod_content = patchf.read()
                     except Exception, excp:
                         return (out_str, "Error in reading from '%s': %s" % (filename, excp))
@@ -2439,7 +2490,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
                 if len(unpatch_items) == 1 and redirect_out:
                     filename = expanduser(redirect_out)
-                    if not filename.startswith(PATH_SEP):
+                    if not is_absolute_path(filename):
                         return (out_str, "Must specify absolute pathname for output file %s" % filename)
                     try:
                         lines, start_line = OTrace.getsourcelines(unpatch_items[0][1])
@@ -2449,7 +2500,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         return (out_str, "Error in saving patch: %s" % excp)
 
                     try:
-                        with open(filename, "w") as f:
+                        with open(os_path(filename), "w") as f:
                             f.write("".join(lines))
                     except Exception, excp:
                         return (out_str, "Error in saving patch source: "+str(excp))
@@ -2479,7 +2530,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 err_str = "No filename to read!"
             else:
                 filename = expanduser(comps[0])
-                if not filename.startswith(PATH_SEP):
+                if not is_absolute_path(filename):
                     return (out_str, "Must specify absolute pathname for input file %s" % filename)
                 if not os.path.exists(filename):
                     return (out_str, "Input file %s not found" % filename)
@@ -2626,7 +2677,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     else:
                         comp_dir = expanduser(comp)
                         fullpath = self.cur_fullpath
-                        absolute = comp_dir.startswith(PATH_SEP)
+                        absolute = is_absolute_path(comp_dir)
                         if absolute:
                             comp_dir = comp_dir[1:]
                             fullpath = []
@@ -2664,7 +2715,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 out_list = []
                 globals_or_locals = self.get_base_subdir() in (GLOBALS_DIR, LOCALS_DIR)
                 for j, dir_path in enumerate(matches):
-                    if dir_path.startswith(PATH_SEP):
+                    if is_absolute_path(dir_path):
                         path_list = dir_path[1:].split(PATH_SEP)[BASE_OFFSET:]
                         locals_dict = OTrace.base_context
                     else:
@@ -2841,7 +2892,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
             else:
                 comp0 = comps.pop(0)
-                if comp0.startswith(PATH_SEP):
+                if is_absolute_path(comp0):
                     # Absolute path
                     if comp0 == PATH_SEP+BASE_DIR:
                         return ("", "Cannot edit/view %s" % comp0)
@@ -2883,10 +2934,10 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
             if redirect_out:
                 filename = expanduser(redirect_out)
-                if not filename.startswith(PATH_SEP):
+                if not is_absolute_path(filename):
                     return (out_str, "Must specify absolute pathname for output file %s" % filename)
                 try:
-                    with open(filename, "w") as f:
+                    with open(os_path(filename), "w") as f:
                         f.write(content)
                     return ("", "")
                 except Exception, excp:
@@ -2940,8 +2991,10 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if "\n" in rem_line or "\r" in rem_line:
                 err_str = "Line breaks are not permitted in expressions"
 
-            elif Set_params["safe_mode"] and "(" in rem_line:
-                err_str = "Open parenthesis is not permitted in expressions in safe mode; set safe_mode False"
+            elif Set_params["safe_mode"] and ("(" in rem_line or re.search(r"[^=]=[^=]", rem_line)):
+                err_str = "Open parenthesis and assignment operator are not permitted in expressions in safe mode; set safe_mode False"
+            elif re.match(r"\s*import\s+", rem_line) or re.match(r"\s*[a-zA-Z]([\w\.]*|\[\w*\])*\s*=[^=]", rem_line):
+                return out_str, "Use 'exec' or '!' to execute import or assignment statements"
             else:
                 if batch:
                     out_str, err_str = self.push(rem_line, batch=True)
@@ -2953,6 +3006,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         pr_command = "print("+rem_line+", file=_stdout)" 
                     out_str, err_str = self.push(pr_command)
                     del self.locals_dict["_stdout"]
+                if err_str and re.search(r"[^=]=[^=]", rem_line):
+                    err_str += "\n Looks like a python assignment statement; try prefixing with 'exec' or '!'"
             return (out_str, err_str)
 
         elif cmd == "exec":
@@ -2985,7 +3040,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             new_path = self.full_path_comps(new_dir)
             if len(new_path) > BASE_OFFSET and new_path[BASE_OFFSET] == DATABASE_DIR:
                 # Staying in database directory
-                if len(new_path) > root_depth+BASE_OFFSET and (new_dir.startswith(PATH_SEP) or
+                if len(new_path) > root_depth+BASE_OFFSET and (is_absolute_path(new_dir) or
                                                    len(cur_path) <= root_depth+BASE_OFFSET or
                                                    new_path[root_depth+BASE_OFFSET] != cur_path[root_depth+BASE_OFFSET]):
                     # Need to query database for root key tree
@@ -3045,7 +3100,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         comps = comps[:]    # Copy, just in case
 
         comp0 = comps[0]
-        if comp0.startswith(PATH_SEP):
+        if is_absolute_path(comp0):
             # Absolute path
             if comp0 == PATH_SEP+BASE_DIR or comp0.startswith(PATH_SEP+BASE_DIR+PATH_SEP):
                 raise AltHandler()
@@ -3061,7 +3116,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         content = None
         if os.path.exists(filepath):
             try:
-                with open(filepath, "r") as f:
+                with open(os_path(filepath), "r") as f:
                     content = f.read()
             except Exception, excp:
                 return (out_str, "Error in reading from '%s': %s" % (filepath, excp))
@@ -3094,7 +3149,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         try:
             # Write modified content
-            with open(filepath, "w") as f:
+            with open(os_path(filepath), "w") as f:
                 f.write(mod_content)
         except Exception, excp:
             return (out_str, "Error in saving file '%s': %s" % (filepath, excp))
@@ -3419,7 +3474,7 @@ class TraceCallback(object):
             else:
                 try:
                     # Read edited temp file
-                    with open(tempname, "r") as tempf:
+                    with open(os_path(tempname), "r") as tempf:
                         return (tempf.read(), "")
                 except Exception, excp:
                     return (None, "Error in reading temp file '%s': %s" % (tempname, excp))
@@ -4083,8 +4138,8 @@ class OTrace(object):
             locals_dict.set_trc("frame", (srcfile, linenum, funcname, lines) )
             locals_dict.set_trc("funcname", funcname)
             if prev_locals_dict is not None:
-                locals_dict[DOWN_STACK] = prev_locals_dict
-                prev_locals_dict[UP_STACK] = locals_dict
+                locals_dict[UP_STACK] = prev_locals_dict
+                prev_locals_dict[DOWN_STACK] = locals_dict
             prev_locals_dict = locals_dict
             framestack.append( locals_dict.get_trc("frame") )
 

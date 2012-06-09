@@ -17,17 +17,18 @@ Unix shell aliases may also not work, but you can use *oshell* aliases.
 Can *otrace* be used in production code? Is it secure?
 ======================================================
 
-Until tracing is initiated, *otrace* simply acts like a loaded, but unused, module.
-There is no performance penalty. The GNU
+Until tracing is initiated, *otrace* simply acts like a loaded, but unused,
+module. There is no performance penalty. The GNU
 `screen <http://www.gnu.org/software/screen>`_ utility can be used to
 provide a detachable terminal for using *otrace* with server processes. This
 terminal can only be accessed by the user who owns the server process. Anyone
 who is able to login with privileges to access the *otrace* terminal can directly
 execute unix shell commands in any case. However, it should be kept in mind
-that the power that makes *otrace* useful also makes it easier for a malicious user
-to examine variables in a running program, or even modify code, without
-having to edit files and restart the program. (The *safe_mode* option of *otrace*
-provides limited protection from code modification.)
+that the very features that make *otrace* useful also make it easier for
+someone who has acquired login privileges to examine variables in a
+running program, or even modify code, without having to edit files and
+restart the program. (The ``lock`` command and the ``safe_mode`` parameter
+provide some protection in such a scenario.)
 
 
 Does it work with Python 3?
@@ -79,11 +80,15 @@ What is *object tagging*?
 ==========================================
 
 The idea behind *object tagging* is that you can put a "marker" on an
-object, by adding a special attribute, indicating that it should be traced.
-Any function or method invocation where a tagged object is present in
-the argument list can be automatically tracked by *otrace*. Thus, we can
-follow a "rogue object" as it makes its way through the system. (It remains
-to be seen how useful this feature will be in practice.)
+object, by adding a special attribute, ``_otrace_tag``, indicating that
+it should be traced. Any function or method invocation where a tagged
+object is present in the argument list can be automatically tracked by
+*otrace*. Thus, we can follow a "rogue object" as it makes its way
+through the application. If a remote procedure call (RPC) implementation
+preserves the special tagging attribute, then tagged objects could
+also be tracked across different hosts running *otrace*, facilitating
+the debugging of distributed applications. (It remains to be seen how
+useful this feature will be in practice.)
 
 
 What license is *otrace* distributed under?
@@ -96,9 +101,9 @@ open source license.
 What platforms does *otrace* support?
 ============================================
 
-*otrace* is written purely in python, but it uses OS-specific calls for some
-of its operations. It has been tested on Linux and Mac OS X. With some
-tweaking, its basic features should work on other plartforms.
+*otrace* is written purely in python, but it uses OS-specific calls for
+file, shell, and terminal-related operations. It has been tested
+only on Linux and Mac OS X, but the demo program also works on Windows.
 
 
 What is ``/osh/web``?
@@ -117,5 +122,10 @@ demo program ``tornademos/chat_websock.py`` for Python and
 Javascript "glue code" that is needed to accomplish this.
 
 
+Why isn't TAB completion working for me?
+===============================================
 
+The GNU ``readline`` module needs to be installed for TAB completion to work.
+(On Mac OS X, the pre-installed ``readline`` module may need to be
+replaced using the ``easy_install readline`` command.)
 

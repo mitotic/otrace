@@ -91,6 +91,8 @@ execute javascript commands in any user's browser via the
   > cd /osh/web
   web> ls
   user1
+  web> set safe_mode False
+  safe_mode = False
   web> cd user1
   web..user1> $("body").css("background","red")
   [object Object]

@@ -163,14 +163,16 @@ Commands
 *oshell* supports the following commands ([..] denotes optional
 parameters; | denotes alternatives)::
 
+
  alias name cmd <arg\*> <arg\1>... # Define alias for command
  cd [pathname]             # change directory to "pathname", which may be omitted, "..", or "/" or a path
  cdls [pathname]           # cd to "pathname" and list "files" (cd+ls)
  del [trace_id1..]         # Delete trace context
- dn                        # Command alias to move down stack frames in a trace context
+ dn                        # Command alias to move one level down in stack frames in a trace context (to a newer frame)
  edit [-f] (filename|class[.method]) [< readfile]  # Edit/patch file/method/function
  exec python_code          # Execute python code (also !<python_code>)
  help [command|*]          # Display help information
+ lock                      # Lock terminal until password is entered
  ls [-acflmtv] [-(.|..|.baseclass)] [pathname1|*]   # List pathname values (or all pathnames in current "directory")
  pr python_expression      # Print value of expression (DEFAULT COMMAND)
  pwd                       # Print current working "directory"
@@ -186,7 +188,7 @@ parameters; | denotes alternatives)::
  unpatch class[.method]|* [> savefile]  # Unpatch method (and save patch to file)
  untag [object|.]          # untag object
  untrace ([class.][method]|*|all)  # Disable tracing for class/method
- up                        # Command alias to move up stack frames in a trace context
+ up                        # Command alias to move one level up in stack frames in a trace context (to an older frame)
  view [-d] [-i] [class/method/file]  # Display source/doc for objects/traces/files
 
 The default command is ``pr``, which evaluates an expression.  So you
@@ -211,7 +213,7 @@ Caveats
 
  - *Memory leaks:*  The trace contexts saved by *otrace* could potentially lead to increased memory usage. Again, only experience will tell.
 
- - *Platforms:*  *otrace* is pure-python, but it has only been tested onLinux and OS X, so far.
+ - *Platforms:*  *otrace* is pure-python, but with some OS-specific calls for file, shell, and terminal-related operations. It has been tested only on Linux and Mac OS X so far, although the demo program works with the Windows console as well.
 
  - *Current limitations:*
           * Decorated methods cannot be patched.
