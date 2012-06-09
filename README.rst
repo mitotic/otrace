@@ -49,8 +49,8 @@ Report bugs and other problems using Github `Issue Tracker <https://github.com/m
 Installation
 ==============================
 
-Download the latest version of the *otrace* 
-`zip archive <https://github.com/mitotic/otrace/zipball/master>`_.
+Download the latest tagged zip archive of *otrace* from the Github
+`tags page <https://github.com/mitotic/otrace/tags>`_.
 The unzipped archive should contain the following files (and some more):
 
    ``hello_trace.py ordereddict.py otrace.py README.rst setup.py ...``
