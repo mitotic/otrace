@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# otrace: An object-oriented tracing tool for nonlinear debugging
+# otrace: An object-oriented debugger for nonlinear tracing
 #
 # otrace was developed as part of the Mindmeldr project.
 # Documentation can be found at http://info.mindmeldr.com/code/otrace
@@ -31,7 +31,7 @@
 #  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-"""An object-oriented tracing tool for nonlinear debugging
+"""An object-oriented debugger for nonlinear tracing
 
 Installation
 ============
@@ -194,6 +194,8 @@ import types
 import urllib
 import weakref
 
+Banner_messages = []
+
 # Save terminal attributes before using readline
 # (Need this to restore terminal attributes after abnormal exit from oshell thread)
 try:
@@ -204,8 +206,13 @@ except Exception:
 
 try:
     import readline   # this allows raw_input to handle line editing
+    if readline.__doc__ and "libedit" in readline.__doc__:
+        # http://stackoverflow.com/questions/7116038/python-tab-completion-mac-osx-10-7-lion
+        readline.parse_and_bind("bind ^I rl_complete")
 except Exception:
     readline = None
+    mod_name = "pyreadline" if sys.platform.startswith("win") else "readline"
+    Banner_messages.append("  Please install '%s' module for TAB completion (e.g. 'easy_install %s')" % (mod_name, mod_name))
 
 
 try:
@@ -827,8 +834,11 @@ class TraceConsole(object):
 
     def run(self):
         self.started = True
-        self.interact(self.banner)
-        print >> sys.stderr, "^C to terminate program"
+        banner = self.banner
+        for msg in Banner_messages:
+             banner += "\n" + msg
+        banner += "\n  ^C to terminate program"
+        self.interact(banner)
 
     def resetbuffer(self):
         self.buffer = []
@@ -2659,6 +2669,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                                 ls_show.add("variable")
                             else:
                                 pass # ignore other options
+
+            globals_or_locals = self.get_base_subdir() in (GLOBALS_DIR, LOCALS_DIR)
             if not comps:
                 if cmd == "rm":
                     return (out_str, "rm: specify entities to delete")
@@ -2681,6 +2693,9 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         if absolute:
                             comp_dir = comp_dir[1:]
                             fullpath = []
+                        elif PATH_SEP not in comp_dir and comp_dir.find("..") == -1 and globals_or_locals:
+                            # Relative path
+                            comp_dir = comp_dir.replace(".", PATH_SEP)
                         assert comp_dir
                         path_list = comp_dir.split(PATH_SEP)
                         comp_matches = self.path_matches(fullpath, path_list, absolute=absolute)
@@ -2713,7 +2728,6 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
                 path_attrs = OrderedDict()
                 out_list = []
-                globals_or_locals = self.get_base_subdir() in (GLOBALS_DIR, LOCALS_DIR)
                 for j, dir_path in enumerate(matches):
                     if is_absolute_path(dir_path):
                         path_list = dir_path[1:].split(PATH_SEP)[BASE_OFFSET:]

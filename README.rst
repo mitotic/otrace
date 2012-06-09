@@ -1,4 +1,4 @@
-otrace: An object-oriented tracing tool for nonlinear debugging
+otrace: An object-oriented debugger for nonlinear tracing
 *********************************************************************************
 .. sectnum::
 .. contents::
@@ -6,7 +6,7 @@ otrace: An object-oriented tracing tool for nonlinear debugging
 Introduction
 =============================
 
-*otrace* is an object-oriented tracing tool for nonlinear debugging
+*otrace* is an object-oriented debugger for nonlinear tracing
 of asynchronous or multithreaded interactive programs. It addresses
 some of the limitations of sequential debugging techniques which
 do not work well with server programs, where multiple requests are
@@ -34,22 +34,14 @@ simple wildcarding are supported.
    - a code patching tool for unit testing
 
 
-Support
-=============================
-
-This README file provides a brief introduction to *otrace*. A tutorial
-using a demo program is available in
-`docs/GettingStarted.rst <http://info.mindmeldr.com/code/otrace/otrace-getting-started>`_
-Additional documentation will be made available on the project home page,
-`info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
-
-Report bugs and other problems using Github `Issue Tracker <https://github.com/mitotic/otrace/issues>`_.
-
-
 Installation
 ==============================
 
-Download the latest tagged zip archive of *otrace* from the Github
+If you wish to install *otrace* without the sample programs, the ``easy_install otrace``
+command should be sufficient (provided the ``setuptools`` module is installed).
+
+The latest archive of *otrace* including sample programs may be
+downloaded from the Github
 `tags page <https://github.com/mitotic/otrace/tags>`_.
 The unzipped archive should contain the following files (and some more):
 
@@ -62,6 +54,18 @@ ensure that these files are  present in the module load path.
 If you wish to install *otrace*, use:
 
    ``python setup.py install``
+
+
+Support
+=============================
+
+This README file provides a brief introduction to *otrace*. A tutorial
+using a demo program is available in
+`docs/GettingStarted.rst <http://info.mindmeldr.com/code/otrace/otrace-getting-started>`_
+Additional documentation will be made available on the project home page,
+`info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
+
+Report bugs and other problems using Github `Issue Tracker <https://github.com/mitotic/otrace/issues>`_.
 
 
 Usage

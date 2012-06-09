@@ -12,7 +12,7 @@ except ImportError:
 setup(name="otrace",
       py_modules=py_modules,
       version="0.30",
-      description="otrace: An object-oriented tracing tool for nonlinear debugging",
+      description="otrace: An object-oriented debugger for nonlinear tracing",
       author="Ramalingam Saravanan",
       author_email="sarava@sarava.net",
       url="http://info.mindmeldr.com/code/otrace",
@@ -33,10 +33,10 @@ setup(name="otrace",
       "Topic :: System :: Shells",
       ],
       long_description="""\
-otrace: An object-oriented tracing tool for nonlinear debugging
+otrace: An object-oriented debugger for nonlinear tracing
 ---------------------------------------------------------------------------
 
-*otrace* is an object-oriented tracing tool for nonlinear debugging
+*otrace* is an object-oriented debugger for nonlinear tracing
 of asynchronous or multithreaded interactive programs. It addresses
 some of the limitations of sequential debugging techniques which
 do not work well with server programs, where multiple requests are
