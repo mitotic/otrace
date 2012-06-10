@@ -173,6 +173,8 @@ import collections
 import copy
 import datetime
 import functools
+import hashlib
+import hmac
 import inspect
 import logging
 import logging.handlers
@@ -180,6 +182,7 @@ import os
 import os.path
 import pprint
 import Queue
+import random
 import re
 import select
 import shlex
@@ -294,6 +297,7 @@ Help_params = OrderedDict()
 Help_params["allow_xml"]     = "Allow output markup for display in browser (if supported)"
 Help_params["append_traceback"] = "Append traceback information to exceptions"
 Help_params["assert_context"]= "No. of lines of context retrieved for traceassert (0 for efficiency)"
+Help_params["auto_lock"]     = "Automatically lock after specified idle time (in seconds), if password is set"
 Help_params["deep_copy"]     = "Create deep copies of arguments and local variables for 'snapshots'"
 Help_params["editor"]        = "Editor to use for editing patches or viewing source"
 Help_params["exec_lock"]     = "Execute code within re-entrant lock"
@@ -303,6 +307,7 @@ Help_params["log_remote"]    = "IP address or domain (:port) for remote logging 
 Help_params["log_truncate"]  = "No. of characters to display for log messages (default: 72)"
 Help_params["max_recent"]    = "Maximum number of entries to keep in /osh/recent"
 Help_params["osh_bin"]       = "Path to prepend to $PATH to override 'ls' etc. (can be set to 'osh_bin')"
+Help_params["password"]      = "Encrypted access password (use otrace.encrypt_password to create it)"
 Help_params["pretty_print"]  = "Use pprint.pformat rather than print to display expressions"
 Help_params["repeat_interval"] = "Command repeat interval (sec)"
 Help_params["safe_mode"]     = "Safe mode (disable code modification and execution)"
@@ -314,6 +319,7 @@ Set_params = {}
 Set_params["allow_xml"]    = True
 Set_params["append_traceback"] = False
 Set_params["assert_context"]   = 0
+Set_params["auto_lock"]    = 0
 Set_params["deep_copy"]    = False
 Set_params["editor"]       = ""
 Set_params["exec_lock"]    = False
@@ -323,6 +329,7 @@ Set_params["log_remote"]   = None # placeholder
 Set_params["log_truncate"] = None # placeholder
 Set_params["max_recent"]   = 10
 Set_params["osh_bin"]      = ""
+Set_params["password"]     = ""
 Set_params["pretty_print"] = False
 Set_params["repeat_interval"] = 0.2
 Set_params["safe_mode"]    = True
@@ -331,6 +338,35 @@ Set_params["trace_active"] = None # placeholder
 Set_params["trace_related"]= False
 
 Trace_rlock = threading.RLock()
+
+
+if sys.version_info[0] < 3:
+    def encode(s):
+        return s
+    def decode(s):
+        return s
+else:
+    def encode(s):
+        return s.encode("utf-8")
+    def decode(s):
+        return s.decode("utf-8")
+
+def encrypt_password(password, salt=None, hexdigits=16):
+    """Encrypt password, returning encrypted password prefixed with salt,
+    which defaults to a random value
+    """
+    if not salt:
+        salt = "%015d" % random.randrange(0, 10**15)
+    elif ":" in salt:
+        raise Exception("Colon not allowed in salt")
+    encrypted = hmac.new(encode(salt), encode(password), digestmod=hashlib.sha256).hexdigest()[:hexdigits]
+    return salt+":"+encrypted
+
+def verify_password(password, encrypted_password):
+    salt, sep, _ = encrypted_password.partition(":")
+    if not salt:
+        raise Exception("No salt in encrypted password")
+    return encrypted_password == encrypt_password(password, salt=salt)
 
 class OSDirectory(object):
     def __init__(self, path=None):
@@ -674,7 +710,10 @@ def getTerminalSize():
 def read_password(prompt="Password:"):
     """Read password, with no echo, from stdin"""
     setTerminalEcho(False)
-    password = raw_input(prompt)
+    try:
+        password = raw_input(prompt)
+    except ValueError:
+        raise EOFError
     sys.stdout.write("\n")
     setTerminalEcho(True)
     return password
@@ -1061,6 +1100,9 @@ class TraceConsole(object):
         If not timeout and sys.stdin, use raw_input, else use select.
         Returns None on timeout and raises EOFError on close
         """
+        if Set_params["auto_lock"] and not timeout:
+            timeout = Set_params["auto_lock"]
+
         if not timeout and self._stdin is sys.stdin:
             try:
                 input_data = raw_input(prompt)
@@ -1069,12 +1111,18 @@ class TraceConsole(object):
             self.last_input_time = time.time()
             return input_data
 
+        if prompt:
+            self._stdout.write(prompt)
+            self._stdout.flush()
+
         # Note: using select messes up the prompt!
         read_list, _, _ = select.select([self._stdin], [], [], timeout)
         if read_list:
             self.last_input_time = time.time()
-            if prompt: self._stdout.write(prompt)
             return self._stdin.readline()
+        elif Set_params ["password"] and Set_params["auto_lock"] and (time.time() - self.last_input_time) > Set_params["auto_lock"]:
+            # Trigger auto lock
+            return "lock\n"
         else:
             return None
 
@@ -1896,9 +1944,23 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             return "", ""
 
         if line.strip() == "lock":
-            password = read_password("Lock password: ").strip()
-            while password != read_password("Enter password to unlock: ").strip():
-                pass
+            if not Set_params["password"]:
+                while True:
+                    password = read_password("Set password: ").strip()
+                    if not password:
+                        return "", "Lock cancelled"
+                    if password == read_password("Confirm password: ").strip():
+                        Set_params["password"] = encrypt_password(password)
+                        break
+            
+            while True:
+                try:
+                    password = read_password("Enter password to unlock: ").strip()
+                    if verify_password(password, Set_params["password"]):
+                        break
+                except:
+                    self.shutdown()
+                    return ("", "Shutting down...")
             return "", ""
 
         if line.lstrip().startswith("repeat "):
@@ -2867,6 +2929,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                             value = param_type(value)
                         if name == "safe_mode" and not self.allow_unsafe and not value:
                             return ("", "Switching to unsafe mode not permitted")
+                        if name == "password" and ":" not in value:
+                            return ("", "No salt in encrypted password; SET PASSWORD FAILED")
                         Set_params[name] = value
                 except Exception, excp:
                     return (out_str, "Error in setting parameter %s: %s" % (name, excp))

@@ -33,12 +33,13 @@ module. There is no performance penalty. The GNU
 provide a detachable terminal for using *otrace* with server processes. This
 terminal can only be accessed by the user who owns the server process. Anyone
 who is able to login with privileges to access the *otrace* terminal can directly
-execute unix shell commands in any case. However, it should be kept in mind
-that the very features that make *otrace* useful also make it easier for
-someone who has acquired login privileges to examine variables in a
-running program, or even modify code, without having to edit files and
-restart the program. (The ``lock`` command and the ``safe_mode`` parameter
-provide some protection in such a scenario.)
+execute unix shell commands in any case. However, the features that
+make *otrace* useful also make it easier for someone who has acquired
+unauthorized login privileges to examine variables in a running program,
+or even modify code, without having to edit files and restart the program.
+This can be prevented by using the ``lock`` command to password-protect
+the *otrace* terminal. (The ``safe_mode`` parameter can help prevent
+inadvertent modification of the running program.)
 
 
 Does it work with Python 3?
