@@ -112,15 +112,31 @@ if __name__ == "__main__":
     http_addr = "127.0.0.1"
     http_port = 8888
 
-    def submit(number):
-        """Simulate user form submission"""
+    def submit(number, timeout=None):
+        """Simulate user form submission by executing a HTTP request"""
         import urllib2
+        def http_request():
+            try:
+                response = urllib2.urlopen("http://%s:%s/?number=%s" % (http_addr, http_port, number))
+                resp_str = decode(response.read())
+                return "\n".join(resp_str.split("\n")[-4:-3]) if resp_str.startswith("<html>") else resp_str
+            except Exception, excp:
+                return excp.reason if isinstance(excp, urllib2.URLError) else str(excp)
+        if not timeout:
+            return http_request()
+
+        # HTTP request with timeout (run in a separate thread)
+        import threading
+        import Queue
+        exec_queue = Queue.Queue()
+        def execute_in_thread():
+            exec_queue.put(http_request())
+        thrd = threading.Thread(target=execute_in_thread)
+        thrd.start()
         try:
-            response = urllib2.urlopen("http://%s:%s/?number=%s" % (http_addr, http_port, number))
-            resp_str = decode(response.read())
-            return "\n".join(resp_str.split("\n")[-4:-3]) if resp_str.startswith("<html>") else resp_str
-        except Exception, excp:
-            return excp.reason if isinstance(excp, urllib2.URLError) else str(excp)
+            return exec_queue.get(block=True, timeout=timeout)
+        except Queue.Empty:
+            return "Timed out after %s seconds" % timeout
 
     # HTTP server
     http_server = MultiThreadedServer((http_addr, http_port), GetHandler)

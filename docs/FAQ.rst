@@ -18,7 +18,7 @@ Can I use *pdb* with *otrace*?
 ===============================================
 
 The ``trace -a <action> -c <condition> <function>`` command allows
-``debug`` as one of the action options. This options switches control
+``pdb`` as one of the action options. This options switches control
 to ``pdb`` when the trace condition is satisfied. (To return control
 to *otrace*, use the ``continue`` command of ``pdb``.)
 

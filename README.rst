@@ -195,7 +195,7 @@ parameters; | denotes alternatives)::
  set [parameter [value]]   # Set (or display) parameter
  source filename           # Read input lines from file
  tag [(object|.) [tag_str]]    # Tag object for tracing
- trace [-a (break|debug|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key|*)   # Enable tracing for class/method/key on matching condition
+ trace [-a (break|ipdb|pdb|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key|*)   # Enable tracing for class/method/key on matching condition
  unpatch class[.method]|* [> savefile]  # Unpatch method (and save patch to file)
  untag [object|.]          # untag object
  untrace ([class.][method]|*|all)  # Disable tracing for class/method

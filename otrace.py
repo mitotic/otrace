@@ -266,6 +266,9 @@ OT_DIRS = set(DIR_LIST)
 
 DIR_PREFIX = dict((dir_name, PATH_SEP + BASE_DIR + PATH_SEP + dir_name + PATH_SEP) for dir_name in DIR_LIST)
 
+BREAK_ACTIONS = ["break", "ipdb", "pdb"]
+TRACE_ACTIONS = BREAK_ACTIONS + ["hold", "tag"]
+
 TRACE_INFO = "__trc"
 DOWN_STACK = "__down"
 UP_STACK = "__up"
@@ -892,12 +895,21 @@ class TraceConsole(object):
         self.buffer = []
 
     @classmethod
-    def invoke_pdb(cls):
-        import pdb
+    def invoke_debugger(cls, action="pdb"):
         if cls.instance:
             cls.instance.suspend_input = True
 
-        pdb.set_trace()
+        if action == "ipdb":
+            try:
+                import ipdb
+                ipdb.set_trace()
+            except ImportError:
+                import pdb
+                pdb.set_trace()
+        else:
+            import pdb
+            pdb.set_trace()
+
         if cls.instance:
             cls.instance.suspend_input = False
 
@@ -1258,11 +1270,12 @@ PARAMETERS""",
 """tag [(object|.) [tag_str|id|time]]    # Tag object for tracing (default tag: id(object))""",
 
 "trace":
-"""trace [-a (break|debug|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key|*)   # Enable tracing for class/method/key on matching condition
+"""trace [-a (break|ipdb|pdb|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key|*)   # Enable tracing for class/method/key on matching condition
 
--a break|debug|hold|tag   Action to be taken when trace condition is satisfied:
+-a break|ipdb|pdb|hold|tag   Action to be taken when trace condition is satisfied:
      break => stop until resume command
-     debug => start pdb
+     ipdb => start ipdb
+     pdb => start pdb
      hold => asynchronously hold this request (if supported)
      tag => tag self argument on method return using a string describing matched trace conditions
 -c call|return|all|tag|comma_sep_arg_match_conditions   Condition to match for tracing:
@@ -2266,16 +2279,15 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             trace_condition = None
             break_action = None
             break_count = 0
-            trace_actions = ("break", "hold", "debug", "tag")
             while comps and comps[0].startswith("-"):
                 comp = comps.pop(0)
                 if comp in ("-a", "-c", "-n") and not comps:
                     return (out_str, "Missing argument for option %s" % comp)
                 if comp == "-a":
-                    if comps[0] in trace_actions:
+                    if comps[0] in TRACE_ACTIONS:
                         break_action = comps.pop(0)
                     else:
-                        return (out_str, "Expected one of %s for option %s" % (comp, trace_actions))
+                        return (out_str, "Expected one of %s for option %s" % (comp, TRACE_ACTIONS))
                 elif comp == "-c":
                     trace_condition = comps.pop(0)
                 elif comp == "-n":
@@ -3913,16 +3925,16 @@ class OTrace(object):
             cls.trace_keys.clear()
 
     @classmethod
-    def break_flow(cls, trace_id, oshell=None):
-        if oshell:
+    def break_flow(cls, trace_id, action="break"):
+        if action == "break":
             # Send signal to OShell
             break_event = threading.Event()
-            oshell.break_queue.put( (trace_id, break_event) )
+            OShell.instance.break_queue.put( (trace_id, break_event) )
             # Wait for signal from OShell
             break_event.wait()
         else:
-            # Invoke PDB (suspends oshell input until pdb exits)
-            OShell.invoke_pdb()
+            # Invoke debugger (suspends oshell input until debugger exits)
+            OShell.invoke_debugger(action)
 
     @classmethod
     def tracereturn(cls, return_value):
@@ -3959,7 +3971,7 @@ class OTrace(object):
         """Trace assertions.
         If not tracing, simply acts like "assert condition, label".
         If action=="break", break execution if condition is False.
-        If action=="debug", invokes pdb if condition is False.
+        If action=="ipdb" or "pdb", invokes ipdb/pdb if condition is False.
         If action=="hold", returns a callable object that accepts a single argument, callback,
           wrapped in a hold_wrapper.
           The callable object will schedule an immediate callback in the event loop if condition is True,
@@ -4012,8 +4024,8 @@ class OTrace(object):
 
             if action == "hold":
                 return check_for_hold(self_arg)
-            elif action in ("break", "debug"):
-                cls.break_flow(trace_id, oshell=(OShell.instance if action == "break" else None))
+            elif action in BREAK_ACTIONS:
+                cls.break_flow(trace_id, action=action)
         finally:
             # Clean up to avoid cyclic references to objects in frame
             del frame_records, frameobj, argvalues, args, varargs, varkw, caller_locals_dict
@@ -4507,8 +4519,8 @@ class OTrace(object):
         if info.call_display:
             # Display call name trace
             cls.callback_handler.callback(info.trace_id, info.methodtype, info.modulename, info.classname, info.fn.__name__, info.arg_val_pairs, info.nameless_args_list)
-            if break_action in ("break", "debug"):
-                cls.break_flow(info.trace_id, oshell=(OShell.instance if break_action == "break" else None))
+            if break_action in BREAK_ACTIONS:
+                cls.break_flow(info.trace_id, action=break_action)
 
         if not trace_opts:
             # Execute actual function call (not tracing)
@@ -4636,8 +4648,8 @@ class OTrace(object):
 
             # Display return name trace
             cls.callback_handler.returnback(info.trace_id, info.methodtype, info.modulename, info.classname, info.fn.__name__, return_value)
-            if break_action in ("break", "debug"):
-                cls.break_flow(info.trace_id, oshell=(OShell.instance if break_action == "break" else None))
+            if break_action in BREAK_ACTIONS:
+                cls.break_flow(info.trace_id, action=break_action)
 
             elif break_action == "hold" and trampoline_return and cls.hold_wrapper and info.self_arg is not None:
                 try:
@@ -4918,8 +4930,8 @@ class OTrace(object):
                                                      context_type="dbaccess", id_label=op_type)
 
         cls.callback_handler.accessback(trace_id, op_type, key_str, entity)
-        if trace_opts.break_action in ("break", "debug"):
-            cls.break_flow(trace_id, oshell=(OShell.instance if trace_opts.break_action == "break" else None))
+        if trace_opts.break_action in BREAK_ACTIONS:
+            cls.break_flow(trace_id, action=trace_opts.break_action)
 
 
     @classmethod
