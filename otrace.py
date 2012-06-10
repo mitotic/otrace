@@ -178,6 +178,7 @@ import logging
 import logging.handlers
 import os
 import os.path
+import pprint
 import Queue
 import re
 import select
@@ -302,6 +303,7 @@ Help_params["log_remote"]    = "IP address or domain (:port) for remote logging 
 Help_params["log_truncate"]  = "No. of characters to display for log messages (default: 72)"
 Help_params["max_recent"]    = "Maximum number of entries to keep in /osh/recent"
 Help_params["osh_bin"]       = "Path to prepend to $PATH to override 'ls' etc. (can be set to 'osh_bin')"
+Help_params["pretty_print"]  = "Use pprint.pformat rather than print to display expressions"
 Help_params["repeat_interval"] = "Command repeat interval (sec)"
 Help_params["safe_mode"]     = "Safe mode (disable code modification and execution)"
 Help_params["save_tags"]     = "Automatically save all tag contexts"
@@ -321,6 +323,7 @@ Set_params["log_remote"]   = None # placeholder
 Set_params["log_truncate"] = None # placeholder
 Set_params["max_recent"]   = 10
 Set_params["osh_bin"]      = ""
+Set_params["pretty_print"] = False
 Set_params["repeat_interval"] = 0.2
 Set_params["safe_mode"]    = True
 Set_params["save_tags"]    = False
@@ -369,6 +372,12 @@ def expanduser(filepath):
         return PATH_SEP + PATH_SEP.join(OTrace.recent_pathnames)
 
     return os.path.expanduser(filepath)
+
+def otrace_pformat(*args, **kwargs):
+    if Set_params["pretty_print"]:
+        return "\n".join(pprint.pformat(arg, **kwargs) for arg in args)
+    else:
+        return " ".join(str(arg) for arg in args)
 
 def de_indent(lines):
     """Remove global indentation"""
@@ -3010,16 +3019,22 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             elif re.match(r"\s*import\s+", rem_line) or re.match(r"\s*[a-zA-Z]([\w\.]*|\[\w*\])*\s*=[^=]", rem_line):
                 return out_str, "Use 'exec' or '!' to execute import or assignment statements"
             else:
-                if batch:
+                if Set_params["pretty_print"]:
+                    self.locals_dict["_otrace_pformat"] = otrace_pformat
+                    pr_command = "_otrace_pformat("+rem_line+", width=%d)" % self.tty_width
+                    out_str, err_str = self.push(pr_command, batch=True)
+                    del self.locals_dict["_otrace_pformat"]
+                elif batch:
                     out_str, err_str = self.push(rem_line, batch=True)
                 else:
-                    self.locals_dict["_stdout"] = self._stdout
+                    # Use 'print' command (pformat does not remove quotes from strings)
+                    self.locals_dict["_otrace_stdout"] = self._stdout
                     if sys.version_info[0] < 3:
-                        pr_command = "print >>_stdout, "+rem_line
+                        pr_command = "print >>_otrace_stdout, "+rem_line
                     else:
-                        pr_command = "print("+rem_line+", file=_stdout)" 
+                        pr_command = "print("+rem_line+", file=_otrace_stdout)" 
                     out_str, err_str = self.push(pr_command)
-                    del self.locals_dict["_stdout"]
+                    del self.locals_dict["_otrace_stdout"]
                 if err_str and re.search(r"[^=]=[^=]", rem_line):
                     err_str += "\n Looks like a python assignment statement; try prefixing with 'exec' or '!'"
             return (out_str, err_str)
