@@ -1,6 +1,6 @@
 # Demo osh script for hello_trace.py
 
-# Allow executiion etc.
+# Allow execution etc.
 set safe_mode false
 
 # msg display + user input alias
@@ -10,6 +10,9 @@ alias msg exec sys.stdout.write('"\*"'); sys.stdin.readline() and '""'
 # sleep alias
 !from time import sleep
 alias slp exec sleep(5)
+
+# encrypt_password alias (Note pythonization of shell arguments using \\**)
+alias encpass pr otrace.encrypt_password(\\**)
 
 noecho "Demo script is ready"
 noecho msg Press ENTER key to proceed:

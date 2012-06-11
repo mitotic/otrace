@@ -274,6 +274,8 @@ DOWN_STACK = "__down"
 UP_STACK = "__up"
 SHOW_HIDDEN = set(["__call__", TRACE_INFO, DOWN_STACK, UP_STACK])
 IGNORE_FUNCNAMES = set(["otrace_function_call", "otrace_wrapped"])
+
+ASSIGNMENT_RE = re.compile(r"\s*[a-zA-Z][a-zA-Z0-9_\.]*\s*=[^=]")
  
 EXEC_PREFIX = "!"
 
@@ -436,6 +438,22 @@ def de_indent(lines):
             # to get code for pure function
             out_lines.append(line)
     return out_lines
+
+def pythonize(args):
+     """Convert shell-style space-separated, unquoted arguments to
+     python-style comma-separated, quoted arguments"""
+     arg_list = []
+     for arg in args:
+          if "=" in arg:
+               kw, sep, arg = arg.partition("=")
+               prefix = kw+sep
+          else:
+               prefix = ""
+          if arg and (arg.isdigit() or arg[0] in "+-" and arg[1:].isdigit()):
+               arg_list.append(prefix+arg)
+          else:
+               arg_list.append(prefix+repr(arg))
+     return ", ".join(arg_list)
 
 def strip_compare_op(prop_name):
     """Return (stripped_prop_name, compare_op) for suffixed property names of the form "arg1!=", "arg2<" etc."""
@@ -2009,13 +2027,18 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             new_comps = []
             clear_comps = False
             for arg in self.aliases[cmd]:
-                s = "\\*"
-                if s in arg:
-                    arg = arg.replace(s, " ".join(comps))
+                if "\\**" in arg:
+                    # Pythonize shell arguments by quoting them (comma-separated)
+                    arg = arg.replace("\\**", pythonize(comps))
+                    clear_comps = True
+                elif "\\*" in arg:
+                    # Substitute all shell arguments (space-separated)
+                    arg = arg.replace("\\*", " ".join(comps))
                     clear_comps = True
                 for j, comp in enumerate(comps):
                     s = "\\"+str(j+1)
                     if s in arg:
+                        # Substitute individual arguments
                         arg = arg.replace(s, comp)
                         clear_comps = True
                 new_comps.append(arg)
@@ -2145,6 +2168,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 # Follow successful cd with command
                 cmd = follow_up_cmd
                 comps = opts + comps
+                rem_line = " ".join(comps)
             else:
                 # Just cd; completed
                 return (out_str, err_str)
@@ -3092,7 +3116,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
             elif Set_params["safe_mode"] and ("(" in rem_line or re.search(r"[^=]=[^=]", rem_line)):
                 err_str = "Open parenthesis and assignment operator are not permitted in expressions in safe mode; set safe_mode False"
-            elif re.match(r"\s*import\s+", rem_line) or re.match(r"\s*[a-zA-Z]([\w\.]*|\[\w*\])*\s*=[^=]", rem_line):
+            elif rem_line.lstrip().startswith("import ") or ASSIGNMENT_RE.match(rem_line):
                 return out_str, "Use 'exec' or '!' to execute import or assignment statements"
             else:
                 if Set_params["pretty_print"]:

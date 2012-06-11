@@ -10,7 +10,7 @@ import sys
 import traceback
 import urlparse
 
-from otrace import OShell, traceassert
+import otrace
 
 if sys.version_info[0] < 3:
     def encode(s):
@@ -99,7 +99,7 @@ class Receive(object):
         ##    print("Client address", request.client_address)
 
         # Trace assertion (initially commented out)
-        ##traceassert(self.value > 0.001, label="num_check")
+        ##otrace.traceassert(self.value > 0.001, label="num_check")
 
         # Compute reciprocal of number
         response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
@@ -147,8 +147,8 @@ if __name__ == "__main__":
         raise Exception("TEST EXCEPTION")
 
     # Initialize OShell instance (to run on separate thread)
-    trace_shell = OShell(locals_dict=locals(), globals_dict=globals(), allow_unsafe=True,
-                         init_file="hello_trace.trc", new_thread=True)
+    trace_shell = otrace.OShell(locals_dict=locals(), globals_dict=globals(), allow_unsafe=True,
+                                init_file="hello_trace.trc", new_thread=True)
 
     try:
         # Start oshell
