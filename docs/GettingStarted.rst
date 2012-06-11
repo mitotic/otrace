@@ -129,7 +129,7 @@ We can examine the source code for the ``Receive.respond`` method using the
       ##    print "Client address", request.client_address
   
       # Trace assertion (initially commented out)
-      ##traceassert(self.value > 0.001, label="num_check")
+      ##otrace.traceassert(self.value > 0.001, label="num_check")
   
       # Compute reciprocal of number
       response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
@@ -285,7 +285,7 @@ Note that we need to activate tracing explicitly by setting parameter
 ``trace_active`` to True to trace ``traceassert`` calls. (This step
 not needed when the ``trace`` command is used, because tracing is
 automatically activated.)
-After the edit, the statement ``traceassert(number > 0.001, label="num_check")``
+After the edit, the statement ``otrace.traceassert(number > 0.001, label="num_check")``
 has been inserted into ``Receive.respond``. In the browser, enter the number
 2 and then the number 0.0005. The latter value triggers a false
 condition on the ``traceassert``. We switch to the assert trace
@@ -405,7 +405,10 @@ Breakpoints
 Breakpoints can be set using the ``-a break`` option for the ``trace``
 command, or the ``action="break"`` argument to ``traceassert``.
 The ``resume`` command is used to resume execution from a breakpoint.
-
+Other possible actions for ``trace`` and ``traceassert`` include
+``pdb`` or ``ipdb``, which launch the respective debuggers at the
+breakpoint. The ``continue`` command of the debuggers should be used
+to return control to *otrace*.
 
 .. |date| date::
 

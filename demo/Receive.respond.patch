@@ -6,7 +6,7 @@ def respond(self, request):
         print("Client address", request.client_address)
 
     # Trace assertion (initially commented out)
-    traceassert(self.value > 0.001, label="num_check")
+    otrace.traceassert(self.value > 0.001, label="num_check")
 
     # Compute reciprocal of number
     response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)

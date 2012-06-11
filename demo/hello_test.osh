@@ -14,6 +14,7 @@ alias slp exec sleep(5)
 # encrypt_password alias (Note pythonization of shell arguments using \\**)
 alias encpass pr otrace.encrypt_password(\\**)
 
+cd ~~g
 noecho "Demo script is ready"
 noecho msg Press ENTER key to proceed:
 
