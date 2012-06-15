@@ -34,6 +34,8 @@ import tornado.web
 import tornado.websocket
 import tornado.wsgi
 
+import otrace
+
 try:
     import json
 except ImportError:
@@ -215,7 +217,7 @@ class WSGIApp(object):
         if message["body"] == "raise":
             raise Exception("raise message")
 
-        OTrace.traceassert(message["body"] != "assert", label="assert_id1")
+        otrace.OTrace.traceassert(message["body"] != "assert", label="assert_id1")
 
         self.update_cache([message])
 
@@ -306,10 +308,14 @@ class ChatSocketHandler(tornado.websocket.WebSocketHandler):
 
 class AuthLoginHandler(BaseHandler):
     def get(self):
-        self.write('<html><body><form action="/auth/login" method="post">'
-                   'Name: <input type="text" name="username">'
-                   '<input type="submit" value="Sign in">'
-                   '</form></body></html>')
+        self.write("""<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body><form action="/auth/login" method="post">
+Name: <input type="text" name="username">
+<input type="submit" value="Sign in">
+</form></body>
+</html>""")
 
     def post(self):
         user = {"username": self.get_argument("username")}
@@ -327,7 +333,7 @@ class AuthLogoutHandler(BaseHandler):
         self.clear_cookie("user")
         self.clear_cookie(WSGIApp.app_name)
         if user:
-            self.write("User <b>%s</b> has been signed out." % user["username"])
+            self.write("<h1>User %s has been signed out.</h1>" % user["username"])
         else:
             self.redirect("/")
 
@@ -380,7 +386,6 @@ class TraceInterface(object):
         
 
 def main():
-    import otrace
     define("console", default=logging.WARNING, help="console_logging_level", type=int)
     define("port", default=8888, help="run on the given port", type=int)
     define("addr", default="127.0.0.1", help="IP address")

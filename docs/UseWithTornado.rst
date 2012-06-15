@@ -94,9 +94,18 @@ execute javascript commands in any user's browser via the
   web> set safe_mode False
   safe_mode = False
   web> cd user1
-  web..user1> $("body").css("background","red")
+  web..user1> $("body")
   [object Object]
-  web..user1> 
+  web..user1> $("body").css("background","red") // Change background  to red
+  [object Object]
+
+In ``chat_websock.py``, user input is handled by the input element
+with id *message*.
+The ``repeat`` command can be used to monitor user's typing in real time::
+
+  web..user1> $("#message")
+  [object Object]
+  web..user1> repeat "User is typing: "+$("#message").val()
 
 
 .. |date| date::

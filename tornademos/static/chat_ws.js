@@ -15,6 +15,9 @@
 // Modified for testing otrace.py
 //
 
+if (typeof $ == "undefined")
+    alert("jQuery not found!")
+
 var console_log = function() {};
 
 $(document).ready(function() {

@@ -233,10 +233,10 @@ The trace context contains information about the function like
 argument values and the call stack.::
 
   Receive..08-45> ls
-  __down  __trc   request self   
+  __trc   __up    request self   
   Receive..08-45> ls -l
-  __down  = {path_comps, __trc, __up, __down, number, self, recv, query_args}
   __trc   = {exc_context, thread, framestack, frame, related, funcname, context, exc_stack, where, id, argvalues}
+  __up   = {path_comps, __trc, __up, __down, number, self, recv, query_args}
   request = <__main__.GetHandler instance at 0x106760fc8>
   self    = <__main__.Receive object at 0x1068cb090>
   Receive..08-45> cd __trc
@@ -304,7 +304,7 @@ which allows us to examine the local variables when the assertion failed::
   /osh/recent/asserts/Receive.respond/as-num_check/05-08-51
   globals> cd ~~
   Receive..08-51> ls
-  __down  __trc   request self   
+  __up  __trc   request self   
   Receive..08-51> self.value
   0.0005
   Receive..08-51> request.headers
