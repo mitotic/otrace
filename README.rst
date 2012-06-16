@@ -59,13 +59,19 @@ If you wish to install *otrace*, use:
 Support
 =============================
 
-This README file provides a brief introduction to *otrace*. A tutorial
-using a demo program is available in
-`docs/GettingStarted.rst <http://info.mindmeldr.com/code/otrace/otrace-getting-started>`_
-Additional documentation will be made available on the project home page,
-`info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
+Info
 
-Report bugs and other problems using Github `Issue Tracker <https://github.com/mitotic/otrace/issues>`_.
+ - This README file provides a brief introduction to *otrace*.
+
+ - Report bugs and other issues using the Github `Issue Tracker <https://github.com/mitotic/otrace/issues>`_.
+
+ -  A tutorial using a demo program is available in
+    `docs/GettingStarted.rst <http://info.mindmeldr.com/code/otrace/otrace-getting-started>`_.
+
+ - `Python and the Holy Grail of Debugging <https://dl.dropbox.com/u/72208800/code/Python-debugging-APUG-jun13.pdf>`_:  slides from a talk given at the Austin Python Users Group.
+
+ - Additional documentation and updates will be made available on the *project home page*,
+   `info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
 
 
 Usage
