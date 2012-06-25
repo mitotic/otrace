@@ -342,6 +342,19 @@ The ``untrace`` command can be used to switch off tracing::
   globals>
 
 
+Preserving trace contexts
+=========================================================
+
+Only a limited number of trace contexts (controlled by ``set max_recent``)
+are retained in memory. If there are too many contexts, the oldest
+contexts are deleted. The  ``save`` command can be used to preserve
+trace contexts in memory. The ``set pickle_file`` command can be used
+to specify a *pickle* database file in which to save all trace
+contexts. This pickle database file can be opened at a later time
+using the ``unpickle`` command to read trace contexts into the
+``/osh/pickled`` directory.
+
+
 Object tag tracing
 =========================================================
 

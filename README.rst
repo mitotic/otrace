@@ -1,4 +1,4 @@
-otrace: An object-oriented debugger for nonlinear tracing
+otrace: An object-oriented python debugger for nonlinear tracing
 *********************************************************************************
 .. sectnum::
 .. contents::
@@ -7,7 +7,8 @@ Introduction
 =============================
 
 *otrace* is an object-oriented debugger for nonlinear tracing
-of asynchronous or multithreaded interactive programs. It addresses
+of asynchronous or multithreaded interactive python programs.
+It addresses
 some of the limitations of sequential debugging techniques which
 do not work well with server programs, where multiple requests are
 handled in parallel. For example, instrumenting web servers with
@@ -203,6 +204,7 @@ parameters; | denotes alternatives)::
  tag [(object|.) [tag_str]]    # Tag object for tracing
  trace [-a (break|ipdb|pdb|hold|tag)] [-c call|return|all|tag|comma_sep_arg_match_conditions] [-n +/-count] ([class.][method]|db_key|*)   # Enable tracing for class/method/key on matching condition
  unpatch class[.method]|* [> savefile]  # Unpatch method (and save patch to file)
+ unpickle filename [field=value]        # Read pickled trace contexts from file 
  untag [object|.]          # untag object
  untrace ([class.][method]|*|all)  # Disable tracing for class/method
  up                        # Command alias to move one level up in stack frames in a trace context (to an older frame)

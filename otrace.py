@@ -171,6 +171,7 @@ import cgitb
 import codeop
 import collections
 import copy
+import cPickle
 import datetime
 import functools
 import hashlib
@@ -186,6 +187,7 @@ import random
 import re
 import select
 import shlex
+import sqlite3
 import StringIO
 import struct
 import subprocess
@@ -250,17 +252,22 @@ BASE1_OFFSET = 2
 BASE2_OFFSET = 3
 TRACE_OFFSET = 6
 
+MAX_PICKLE_CHECK_DEPTH = 3   # Max depth to check for pickleability
+
 ALL_DIR = "all"
 BROWSER_DIR = "browser"
 DATABASE_DIR = "db"
 GLOBALS_DIR = "globals"
 LOCALS_DIR = "locals"
 PATCHES_DIR = "patches"
+PICKLED_DIR = "pickled"
 RECENT_DIR = "recent"
 SAVED_DIR = "saved"
 WEB_DIR = "web"
 
-DIR_LIST = [ALL_DIR, BROWSER_DIR, DATABASE_DIR, GLOBALS_DIR, LOCALS_DIR, PATCHES_DIR, RECENT_DIR, SAVED_DIR, WEB_DIR]
+LAZY_DIRS = [DATABASE_DIR, PICKLED_DIR]   # Lazy data loading directories
+
+DIR_LIST = [ALL_DIR, BROWSER_DIR, DATABASE_DIR, GLOBALS_DIR, LOCALS_DIR, PATCHES_DIR, PICKLED_DIR, RECENT_DIR, SAVED_DIR, WEB_DIR]
 
 OT_DIRS = set(DIR_LIST)
 
@@ -313,12 +320,14 @@ Help_params["log_truncate"]  = "No. of characters to display for log messages (d
 Help_params["max_recent"]    = "Maximum number of entries to keep in /osh/recent"
 Help_params["osh_bin"]       = "Path to prepend to $PATH to override 'ls' etc. (can be set to 'osh_bin')"
 Help_params["password"]      = "Encrypted access password (use otrace.encrypt_password to create it)"
+Help_params["pickle_file"]   = "Name of file to save pickled trace contexts"
 Help_params["pretty_print"]  = "Use pprint.pformat rather than print to display expressions"
 Help_params["repeat_interval"] = "Command repeat interval (sec)"
 Help_params["safe_mode"]     = "Safe mode (disable code modification and execution)"
 Help_params["save_tags"]     = "Automatically save all tag contexts"
 Help_params["trace_active"]  = "Activate tracing (can be used to force/suppress tracing)"
 Help_params["trace_related"] = "Automatically trace calls related to tagged objects"
+Help_params["unpickle_file"] = "Name of file to read pickled trace contexts from"
 
 Set_params = {}
 Set_params["allow_xml"]    = True
@@ -335,15 +344,17 @@ Set_params["log_truncate"] = None # placeholder
 Set_params["max_recent"]   = 10
 Set_params["osh_bin"]      = ""
 Set_params["password"]     = ""
+Set_params["pickle_file"]  = ""
 Set_params["pretty_print"] = False
 Set_params["repeat_interval"] = 0.2
 Set_params["safe_mode"]    = True
 Set_params["save_tags"]    = False
 Set_params["trace_active"] = None # placeholder
 Set_params["trace_related"]= False
+Set_params["unpickle_file"]= None # placeholder
 
 Trace_rlock = threading.RLock()
-
+Pickle_rlock = threading.RLock()
 
 if sys.version_info[0] < 3:
     def encode(s):
@@ -413,6 +424,10 @@ def expanduser(filepath):
         return PATH_SEP + PATH_SEP.join(OTrace.recent_pathnames)
 
     return os.path.expanduser(filepath)
+
+def expandpath(filepath):
+    """Return expanded filepath (absolute path or assumed relative to work directory)"""
+    return expanduser(filepath if is_absolute_path(filepath) or filepath.startswith(NEWCONTEXT_PREFIX) else WORKDIR_PREFIX+PATH_SEP+filepath)
 
 def otrace_pformat(*args, **kwargs):
     if Set_params["pretty_print"]:
@@ -522,10 +537,12 @@ def match_parse(match_str, delimiter=","):
 def get_obj_properties(value, full_path=None):
     """Return (python_mime_type, command) for object value"""
     opts = ""
-    if full_path:
-        if len(full_path) > BASE_OFFSET and full_path[BASE_OFFSET] == DATABASE_DIR:
+    if full_path and OShell.instance:
+        
+        if len(full_path) > BASE_OFFSET and full_path[BASE_OFFSET] in OShell.instance.lazy_dirs:
             # In database
-            if len(full_path) == BASE2_OFFSET+1:
+            base_subdir = full_path[BASE_OFFSET]
+            if len(full_path) == BASE1_OFFSET+OShell.instance.lazy_dirs[base_subdir].root_depth:
                 # Need to "cdls" to load database entries
                 return ("object", "cdls")
             opts += " -v"
@@ -843,7 +860,9 @@ class TraceConsole(object):
         self.locals_dict = locals_dict
         self.banner = banner
         self.echo_callback = echo_callback
-        self.db_interface = db_interface
+        self.lazy_dirs = {PICKLED_DIR: PickleInterface}
+        if db_interface:
+            self.lazy_dirs[DATABASE_DIR] = db_interface
         self.web_interface = web_interface
         self.no_input = no_input
         self.thread = threading.Thread(target=self.run) if new_thread else None
@@ -1311,8 +1330,11 @@ PARAMETERS""",
 In directory /osh/patches, "unpatch *" will unpatch all currently patched methods.
 """,
 
+"unpickle":
+"""unpickle filename [field=value]        # Read pickled trace contexts from file """,
+
 "untag":
-"""untag [object|.]          # untag object""",
+"""untag [object|.]          # Untag object""",
 
 "untrace":
 """untrace ([class.][method]|*|all)  # Disable tracing for class/method""",
@@ -1385,6 +1407,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         OTrace.base_context[GLOBALS_DIR] = globals_dict
         OTrace.base_context[LOCALS_DIR] = locals_dict
+        OTrace.base_context[PICKLED_DIR] = {}
 
         self.break_queue = Queue.Queue()
         self.break_events = OrderedDict()
@@ -1422,16 +1445,17 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         if self.init_func:
             self.init_func(self)
 
-        if self.db_interface:
-            OTrace.set_database_root( self.db_interface.get_root_tree() )
-            self.db_interface.set_access_hook(OTrace.access_hook)
+        db_interface = self.lazy_dirs.get(DATABASE_DIR)
+        if db_interface:
+            OTrace.set_database_root(db_interface.get_root_tree())
+            db_interface.set_access_hook(OTrace.access_hook)
 
         if self.web_interface:
             OTrace.set_web_root( self.web_interface.get_root_tree() )
             self.web_interface.set_web_hook(OTrace.web_hook)
 
         if self.init_file:
-            filename = expanduser(filename if is_absolute_path(self.init_file) or self.init_file.startswith(NEWCONTEXT_PREFIX) else WORKDIR_PREFIX+PATH_SEP+self.init_file)
+            filename = expandpath(self.init_file)
             if os.path.exists(filename):
                 self.stuff_lines( ["source '%s'\n" % filename] )
 
@@ -1484,8 +1508,9 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         return []
 
     def get_db_root_path(self):
-        if self.db_interface and len(self.cur_fullpath) >= self.db_interface.root_depth+BASE1_OFFSET and self.get_base_subdir() == DATABASE_DIR:
-            return self.cur_fullpath[:self.db_interface.root_depth+BASE1_OFFSET]
+        base_subdir = self.get_base_subdir()
+        if base_subdir in self.lazy_dirs and len(self.cur_fullpath) >= self.lazy_dirs[base_subdir].root_depth+BASE1_OFFSET:
+            return self.cur_fullpath[:self.lazy_dirs[base_subdir].root_depth+BASE1_OFFSET]
         return []
 
     def get_web_path(self):
@@ -1652,8 +1677,9 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         indx = full_path.index(ENTITY_CHAR)
         key_comps = full_path[:indx]
         sub_comps = full_path[indx+1:]
-        if full_path[BASE_OFFSET] == DATABASE_DIR:
-            entity_key = self.db_interface.key_from_path(key_comps[BASE1_OFFSET:])
+        base_subdir = full_path[BASE_OFFSET]
+        if base_subdir in self.lazy_dirs:
+            entity_key = self.lazy_dirs[base_subdir].key_from_path(key_comps[BASE1_OFFSET:])
         else:
             entity_key = None
         return key_comps, sub_comps, entity_key
@@ -1767,7 +1793,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         elif len(self.cur_fullpath) == TRACE_OFFSET and self.get_base_subdir() in (RECENT_DIR, SAVED_DIR):
             # Special case; double path component in prompt
             class_prefix = self.cur_fullpath[BASE2_OFFSET][INAME]
-            time_suffix = self.cur_fullpath[BASE2_OFFSET+2][INAME][3:]
+            time_suffix = self.cur_fullpath[BASE2_OFFSET+2][INAME][7:]
             if "." in class_prefix:
                 class_prefix = class_prefix[:class_prefix.find(".")]
             self.prompt1 = "%s..%s> " % (class_prefix, time_suffix)
@@ -2413,10 +2439,10 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     if not access_type:
                         access_type = "modify"
                     key_path = trace_value.split(PATH_SEP)
-                    if ENTITY_CHAR in key_path:
+                    if ENTITY_CHAR in key_path or DATABASE_DIR not in self.lazy_dirs:
                         return (out_str, "Invalid trace key")
                     else:
-                        key = self.db_interface.key_from_path(key_path[1:])
+                        key = self.lazy_dirs[DATABASE_DIR].key_from_path(key_path)
                         if not key:
                             return (out_str, "Invalid trace key: " + trace_value)
                         else:
@@ -2721,7 +2747,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if cmd == "rm":
                 if Set_params["safe_mode"]:
                     return (out_str, "rm: deletion not permitted in safe mode; set safe_mode False")
-                elif not self.db_interface:
+                elif not self.lazy_dirs:
                     return (out_str, "rm: no database connected")
                 elif comps and comps[0] == "-r":
                     recursive = True
@@ -2850,11 +2876,15 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
                     if ENTITY_CHAR in path_list:
                         key_comps, sub_comps, entity_key = self.entity_path_comps(full_path)
-                        if entity_key:
-                            entity = self.db_interface.get_entity(entity_key)
+                        if entity_key and full_path[BASE_OFFSET] in self.lazy_dirs:
+                            entity = self.lazy_dirs[full_path[BASE_OFFSET]].get_entity(entity_key)
                             path_list = sub_comps
-                            locals_dict = ObjectDict(entity) if entity else {}
-
+                            if isinstance(entity, dict):
+                                locals_dict = entity
+                            elif entity:
+                                locals_dict = ObjectDict(entity)
+                            else:
+                                locals_dict = {}
                     if not base_class or not hasattr(base_class, path_list[-1]):
                         value = self.get_subdir(locals_dict, path_list, value=True)
                         if inspect.isclass(value):
@@ -2918,21 +2948,23 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
             # rm (for database)
             out_list = []
-            delete_list = []
+            delete_lists = collections.defaultdict(list)
             for j, dir_path in enumerate(matches):
                 full_path = self.full_path_comps(dir_path)
-                if len(full_path) < BASE2_OFFSET or full_path[BASE_OFFSET] != DATABASE_DIR or ENTITY_CHAR in full_path:
+                base_subdir = full_path[BASE_OFFSET]
+                if len(full_path) < BASE2_OFFSET or base_subdir not in self.lazy_dirs or ENTITY_CHAR in full_path:
                     err_str += "Invalid path: " +dir_path+" "
                 else:
-                    entity_key = self.db_interface.key_from_path(full_path[BASE1_OFFSET:])
+                    entity_key = self.lazy_dirs[base_subdir].key_from_path(full_path[BASE1_OFFSET:])
                     if not entity_key:
                         err_str += "Invalid path: " +dir_path+" "
                     else:
-                        delete_list.append(entity_key)
+                        delete_lists[base_subdir].append(entity_key)
 
-            if not err_str and delete_list:
-                deleted_keys = self.db_interface.delete_entities(delete_list, recursive=recursive)
-                out_list += "Deleted %s keys" % len(deleted_keys)
+            if not err_str and delete_lists:
+                for base_subdir, key_list in delete_lists.items():
+                    deleted_keys = self.lazy_dirs[base_subdir].delete_entities(key_list, recursive=recursive)
+                    out_list += "Deleted %s keys" % len(deleted_keys)
 
             out_str = "".join(out_list)
             return (out_str, err_str)
@@ -2955,6 +2987,14 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         OTrace.callback_handler.remote_log(value, remove=(not value))
                     elif name == "log_truncate":
                         OTrace.callback_handler.tracelen(int(value))
+                    elif name == "pickle_file":
+                        if PickleInterface.write_connection:
+                            PickleInterface.write_connection.close()
+                            PickleInterface.write_connection = None
+                        if value:
+                            PickleInterface.create_pickle_db(expandpath(value))
+                    elif name == "unpickle_file":
+                        pass
                     elif name == "trace_active":
                         OTrace.trace_active = bool(value)
                     else:
@@ -2987,6 +3027,10 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         value = OTrace.callback_handler.remote_log()
                     elif name == "log_truncate":
                         value = OTrace.callback_handler.tracelen()
+                    elif name == "pickle_file":
+                        value = PickleInterface.write_file
+                    elif name == "unpickle_file":
+                        value = PickleInterface.read_file
                     elif name == "trace_active":
                        value = OTrace.trace_active
                     else:
@@ -3100,6 +3144,32 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 return (out_str, "Error in %s: %s" % (cmd, excp))
             return (out_str, err_str)
 
+        elif cmd == "unpickle":
+            # Read and unpickle trace contexts
+            if not comps:
+                return (out_str, "Please specify filename")
+            filename = expandpath(comps.pop(0))
+            filters = {}
+            while comps:
+                comp = comps.pop(0)
+                field, sep, value = comp.partition("=")
+                if sep:
+                    filters[str(field)] = value
+            try:
+                PickleInterface.open_pickle_db(filename)
+                keys = PickleInterface.read_keys_pickle_db(**filters)
+                for key in keys:
+                    dirs = ContextDict.split_trace_id(key)
+                    context = OTrace.base_context[PICKLED_DIR]
+                    for cdir in dirs:
+                        if cdir not in context:
+                            context[cdir] = {}
+                        context = context[cdir]
+                    context[ENTITY_CHAR] = None
+            except Exception, excp:
+                raise
+                return (out_str, "Error in unpickling from %s: %s" % (filename, excp))
+
         elif cmd == "pr":
             # Evaluate expression and print it
             if len(comps) == 1 and comps[0].startswith(PATH_SEP+BASE_DIR+PATH_SEP):
@@ -3129,11 +3199,13 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 else:
                     # Use 'print' command (pformat does not remove quotes from strings)
                     self.locals_dict["_otrace_stdout"] = self._stdout
+                    self.locals_dict["_otrace_value"] = self.get_cur_value()
                     if sys.version_info[0] < 3:
                         pr_command = "print >>_otrace_stdout, "+rem_line
                     else:
                         pr_command = "print("+rem_line+", file=_otrace_stdout)" 
                     out_str, err_str = self.push(pr_command)
+                    del self.locals_dict["_otrace_value"]
                     del self.locals_dict["_otrace_stdout"]
                 if err_str and re.search(r"[^=]=[^=]", rem_line):
                     err_str += "\n Looks like a python assignment statement; try prefixing with 'exec' or '!'"
@@ -3146,6 +3218,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             else:
                 out_str, err_str = self.push(rem_line, batch=batch)
             return (out_str, err_str)
+
         else:
             return (out_str, "Unrecognized command '%s'" % cmd)
 
@@ -3156,19 +3229,22 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         out_str, err_str = "", ""
         cur_path = [comp[INAME] for comp in self.cur_fullpath]
         if new_dir == ENTITY_CHAR and ENTITY_CHAR not in self.locals_dict and ENTITY_CHAR in cur_path:
+            # cd to entity "root" directory
             key_comps, sub_comps, entity_key = self.entity_path_comps(self.full_path_comps(new_dir))
             entity_dir = PATH_SEP.join([".."]*(len(cur_path)-len(key_comps)-1))
             if entity_dir:
                 err_str = self.change_workdir(entity_dir)
                 if err_str:
                     return (out_str, err_str)
-        elif new_dir and self.db_interface and len(cur_path) > BASE_OFFSET and cur_path[BASE_OFFSET] == DATABASE_DIR:
-            # Currently in database directory, and switching to non-trace directory
-            root_depth = self.db_interface.root_depth
+        elif new_dir and len(cur_path) > BASE_OFFSET and cur_path[BASE_OFFSET] in self.lazy_dirs:
+            # Currently in a lazy directory
+            base_subdir = cur_path[BASE_OFFSET]
+            lazy_interface = self.lazy_dirs[base_subdir]
+            root_depth = lazy_interface.root_depth
             sub_dir = new_dir
             new_path = self.full_path_comps(new_dir)
-            if len(new_path) > BASE_OFFSET and new_path[BASE_OFFSET] == DATABASE_DIR:
-                # Staying in database directory
+            if len(new_path) > BASE_OFFSET and new_path[BASE_OFFSET] == base_subdir:
+                # Staying in same lazy directory
                 if len(new_path) > root_depth+BASE_OFFSET and (is_absolute_path(new_dir) or
                                                    len(cur_path) <= root_depth+BASE_OFFSET or
                                                    new_path[root_depth+BASE_OFFSET] != cur_path[root_depth+BASE_OFFSET]):
@@ -3180,8 +3256,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         if err_str:
                             return (out_str, err_str)
                     # Retrieve key tree for root key
-                    root_key = self.db_interface.key_from_path(new_path[BASE1_OFFSET:root_depth+BASE1_OFFSET])
-                    locals_dict = self.db_interface.get_child_tree(root_key)
+                    root_key = lazy_interface.key_from_path(new_path[BASE1_OFFSET:root_depth+BASE1_OFFSET])
+                    locals_dict = lazy_interface.get_child_tree(root_key)
                     for j in xrange(BASE1_OFFSET, root_depth+BASE1_OFFSET):
                         locals_dict = locals_dict[new_path[j]]
                     self.locals_dict = locals_dict
@@ -3200,8 +3276,13 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                             err_str = self.change_workdir(key_dir)
                             if err_str:
                                 return (out_str, err_str)
-                        entity = self.db_interface.get_entity(entity_key)
-                        self.locals_dict = ObjectDict(entity) if entity else {}
+                        entity = lazy_interface.get_entity(entity_key)
+                        if isinstance(entity, dict):
+                            self.locals_dict = entity
+                        elif entity:
+                            self.locals_dict = ObjectDict(entity)
+                        else:
+                            self.locals_dict = {}
                         self.cur_fullpath.append( (ENTITY_CHAR, self.locals_dict) )
 
             if sub_dir:
@@ -3344,18 +3425,15 @@ class ContextDict(dict):
         else:
             context_id = ctype
 
-        # Replace any separators in trace_id components with hash
-        # (to allow trace id to be split apart easily)
-        fullmethodname = fullmethodname.replace(TRACE_ID_SEP, "#")
-        context_id = context_id.replace(TRACE_ID_SEP, "#")
+        # Replace any separators in trace_id components with ..
+        fullmethodname = fullmethodname.replace(TRACE_ID_SEP, "..")
+        context_id = context_id.replace(TRACE_ID_SEP, "..")
 
         return (TRACE_ID_SEP.join((fullmethodname, context_id, trace_timestamp)), context_id)
 
     @classmethod
     def split_trace_id(cls, trace_id):
         fullmethodname, context_id, trace_timestamp = trace_id.split(TRACE_ID_SEP)
-        fullmethodname = fullmethodname.replace("#", TRACE_ID_SEP)
-        context_id = context_id.replace("#", TRACE_ID_SEP)
 
         ctype, sep, id_label = context_id.partition("-")
         if ctype not in cls.context_types:
@@ -4101,8 +4179,8 @@ class OTrace(object):
     @classmethod
     def get_timestamp(cls):
         with Trace_rlock:
-            ##TRACE_TIMESTAMP_FORMAT = "%y%m%d-%H-%M-%S"
-            TRACE_TIMESTAMP_FORMAT = "%H-%M-%S"
+            TRACE_TIMESTAMP_FORMAT = "%y%m%d-%H-%M-%S"
+            ##TRACE_TIMESTAMP_FORMAT = "%H-%M-%S"
             utctime = datetime.datetime.utcnow()
             short_timestamp = utctime.strftime(TRACE_TIMESTAMP_FORMAT)
             long_timestamp = short_timestamp + ".%06d" % (utctime.microsecond//1000, )
@@ -4203,6 +4281,8 @@ class OTrace(object):
             cls.recent_trace_id[0] = trace_id
             cls.recent_trace_context[0] = new_context
 
+            if PickleInterface.write_connection:
+                PickleInterface.write_pickle_db(trace_id, new_context)
             return (new_context, trace_id)
 
     @classmethod
@@ -5124,6 +5204,223 @@ class HoldHandler(object):
         if not callback:
             return
         schedule_callback(functools.partial(callback, self.resume_value))
+
+# otrace pickle_interface
+class PickleInterface(object):
+    root_depth = 4   # Depth of key path tree dict that is automatically updated
+                     # Below this depth, the key path tree is updated on demand,
+                     # one branch at a time
+
+    write_connection = None
+    read_connection = None
+    write_file = ""
+    read_file = ""
+
+    @classmethod
+    def set_monitor(cls, monitor):
+        pass
+
+    @classmethod
+    def set_access_hook(cls, hook):
+        pass
+
+    @classmethod
+    def key_from_path(cls, path_list):
+        """ Construct key from list of path components
+        """
+        if not path_list:
+            return None
+
+        if len(path_list) < 2:
+            path_list = path_list + ["*"]
+
+        if len(path_list) < 3:
+            for ctype, context_type in OTrace.context_types:
+                if path_list[0] == context_type:
+                    return TRACE_ID_SEP.join([path_list[1], ctype+"-*", "*"])
+            return None
+
+        if len(path_list) < 4:
+            path_list = path_list + ["*"]
+
+        # Primary key (trace_id) = class.method:context_id:timestamp
+        return TRACE_ID_SEP.join(path_list[1:4]) 
+
+    @classmethod
+    def path_from_key(cls, key):
+        """ Convert key to path component list
+        """
+        return list(ContextDict.split_trace_id(key))
+        
+    @classmethod
+    def get_entity(cls, entity_key):
+        """Read and return trace context from db"""
+        key = cls.key_from_path([""] + entity_key.replace(PATH_SEP, TRACE_ID_SEP).split(TRACE_ID_SEP))
+        contexts = cls.read_records_pickle_db(key=key)
+        return contexts[0] if contexts else None
+
+    @classmethod
+    def delete_entities(cls, key_list, recursive=False):
+        """ Delete directory tree entries for key_list (not the actual pickled entities)"""
+        deleted = []
+        for key in key_list:
+            path = cls.path_from_key(key)
+            context = OTrace.base_context[PICKLED_DIR]
+            parents = []
+            while path:
+                cdir = path.pop(0)
+                if cdir == "*":
+                    break
+                elif cdir in context:
+                    parents.append([context, cdir])
+                    context = context[cdir]
+                else:
+                    context = None
+                    break
+
+            if not context:
+                continue
+            context.clear()
+            deleted.append(key)
+            while parents:
+                context, cdir = parents.pop()
+                if not context.get(cdir):
+                    context.pop(cdir, None)
+        return deleted
+
+    @classmethod
+    def get_root_tree(cls):
+        """ Returns dict tree (with root_depth) that is updated automatically
+        """
+        return OTrace.base_context[PICKLED_DIR]
+
+    @classmethod
+    def get_child_tree(cls, ancestor_key, entity_char=":"):
+        """ Returns dict tree branch below the root tree
+        """
+        path = cls.path_from_key(ancestor_key)
+        context = {entity_char: cls.get_entity(ancestor_key)}
+        while path:
+            key = path.pop()
+            context = {key: context}
+        return context
+
+    @classmethod
+    def create_pickle_db(cls, filename):
+        """Create pickle database file for writing
+        (accessed only from application, not otrace)
+        """
+        try:
+            cls.write_connection = sqlite3.connect(filename, check_same_thread=False)
+            cls.write_file = filename
+            cls.pickle_names = ["otrace_context", "recnum", "key", "methodname", "context_id", "timestamp", "pickled_object"]
+
+            cls.pickle_create_sql = "CREATE TABLE IF NOT EXISTS %s (%s INTEGER PRIMARY KEY AUTOINCREMENT, %s TEXT UNIQUE, %s TEXT, %s TEXT, %s TEXT, %s TEXT)" % tuple(cls.pickle_names[:])
+            cls.pickle_insert_sql = "INSERT INTO %s VALUES (null, :%s, :%s, :%s, :%s, :%s)" % tuple(cls.pickle_names[:1] + cls.pickle_names[2:])
+
+            cls.pickle_select_key_sql = "SELECT %s FROM %s" % (cls.pickle_names[2], cls.pickle_names[0])
+            cls.pickle_select_record_sql = "SELECT * FROM %s" % (cls.pickle_names[0],)
+            cls.write_connection.execute(cls.pickle_create_sql)
+            cls.write_connection.commit()
+        except sqlite3.OperationalError, msg:
+            logging.error("Error in creating pickle database %s: %s" % (cls.write_file, msg))
+            raise
+
+    @classmethod
+    def pickle_check(cls, obj, depth=0):
+        """Return copy of object to be pickled, replacing non-pickleable components with string
+        representations
+        """
+        # PRELIMINARY IMPLEMENTATION
+        # (Until we develop "failsafe" pickling, this will only pickle pickleable objects
+        # upto certain depth and stringify the rest, e.g., files, StringIO etc.)
+        if depth < MAX_PICKLE_CHECK_DEPTH:
+            if isinstance(obj, (list, tuple)):
+                new_obj = [cls.pickle_check(x, depth=depth+1) for x in obj]
+                return new_obj if isinstance(obj, list) else tuple(new_obj)
+
+            if isinstance(obj, dict):
+                return dict((key, cls.pickle_check(value, depth=depth+1)) for key, value in obj.iteritems())
+
+        try:
+            # Check if object is pickleable
+            dummy = cPickle.dumps(obj)
+            return obj
+        except Exception:
+            # Object not pickleable; stringify it
+            return str(obj)
+
+    @classmethod
+    def write_pickle_db(cls, trace_id, obj):
+        """Write pickled context object corresponding to trace_id
+        """
+        context_type, methodname, context_id, timestamp = ContextDict.split_trace_id(trace_id)
+        try:
+            pickled = cPickle.dumps(cls.pickle_check(obj), cPickle.HIGHEST_PROTOCOL)
+            with Pickle_rlock:
+                cursor = cls.write_connection.execute(cls.pickle_insert_sql,
+                                {"key": trace_id, "timestamp": timestamp, "methodname": methodname,
+                                 "context_id": context_id, "pickled_object": sqlite3.Binary(pickled)})
+                cls.write_connection.commit()
+        except Exception, excp:
+            logging.error("Error in adding entry to pickle_db %s: %s", cls.write_file, excp)
+
+    @classmethod
+    def open_pickle_db(cls, filename):
+        """Open pickle database file for reading
+        (accessed only from otrace thread)
+        """
+        try:
+            cls.read_file = filename
+            if filename == cls.write_file:
+                cls.read_connection = cls.write_connection
+            else:
+                if cls.read_connection and cls.read_connection is not cls.write_connection:
+                    cls.read_connection.close()
+                    cls.read_connection = None
+                cls.read_connection = sqlite3.connect(filename)
+        except sqlite3.OperationalError, msg:
+            logging.error("Error in reading pickle database %s: %s" % (cls.read_file, msg))
+            raise
+
+    @classmethod
+    def read_keys_pickle_db(cls, **kwargs):
+        """Read keys as filtered by kwargs
+        (key=..., methodname=..., context_id=...)
+        and return list of matching keys
+        (If no filters, all keys are returned)
+        """
+        try:
+            with Pickle_rlock:
+                select_sql = cls.pickle_select_key_sql
+                select_vals = []
+                for arg_name, arg_value in kwargs.items():
+                    select_sql += " WHERE %s=?" % arg_name
+                    select_vals.append(arg_value)
+                cursor = cls.read_connection.execute(select_sql, select_vals)
+                return [str(x[0]) for x in cursor.fetchall()]
+        except Exception, excp:
+            logging.error("Error in retrieving key(s) from pickle_db: %s", kwargs, excp)
+
+    @classmethod
+    def read_records_pickle_db(cls, **kwargs):
+        """Read contexts as filtered by kwargs
+        (key=..., methodname=..., context_id=...)
+        and return list of unpickled context objects
+        (If no filters, all records are returned)
+        """
+        try:
+            with Pickle_rlock:
+                select_sql = cls.pickle_select_record_sql
+                select_vals = []
+                for arg_name, arg_value in kwargs.items():
+                    select_sql += " WHERE %s=?" % arg_name
+                    select_vals.append(arg_value)
+                cursor = cls.read_connection.execute(select_sql, select_vals)
+                rows = cursor.fetchall()
+                return [cPickle.loads(str(row[-1])) for row in rows]
+        except Exception, excp:
+            logging.error("Error in retrieving record(s) from pickle_db: %s", kwargs, excp)
 
 
 # Convenient aliases
