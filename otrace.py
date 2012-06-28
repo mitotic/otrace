@@ -2190,7 +2190,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if new_dir and PATH_SEP not in new_dir and new_dir.find("..") == -1 and self.get_base_subdir() in (GLOBALS_DIR, LOCALS_DIR):
                 # Replace . with /
                 new_dir = new_dir.replace(".", PATH_SEP)
-            out_str, err_str = self.cd(new_dir)
+            out_str, err_str = self.cmd_cd(new_dir)
             # Set prompt after changing directory
             self.update_prompt()
 
@@ -2322,154 +2322,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         # Handle remaining oshell commands
         if cmd == "trace":
-            trace_name = ""
-            trace_call = False
-            trace_return = False
-            match_tag = ""
-            argmatch = {}
-            access_type = ""
-            fullname = ""
-
-            trace_condition = None
-            break_action = None
-            break_count = 0
-            while comps and comps[0].startswith("-"):
-                comp = comps.pop(0)
-                if comp in ("-a", "-c", "-n") and not comps:
-                    return (out_str, "Missing argument for option %s" % comp)
-                if comp == "-a":
-                    if comps[0] in TRACE_ACTIONS:
-                        break_action = comps.pop(0)
-                    else:
-                        return (out_str, "Expected one of %s for option %s" % (comp, TRACE_ACTIONS))
-                elif comp == "-c":
-                    trace_condition = comps.pop(0)
-                elif comp == "-n":
-                    if comps[0].isdigit() or (comps[0][1:].isdigit() and comps[0][0] in "+-"):
-                        break_count = int(comps.pop(0))
-                    else:
-                        return (out_str, "Expected integer argument for option %s" % comp)
-                else:
-                    return (out_str, "Invalid option %s" % comp)
-
-            if not comps:
-                keys = OTrace.trace_names.keys()
-                keys.sort()
-                out_str = "\n".join(str(OTrace.trace_names[k]) for k in keys)
-            else:
-                trace_name = comps.pop(0)
-                trace_value = None
-                tracing_key = False
-                parent_obj = None
-                if trace_name.startswith(DIR_PREFIX[GLOBALS_DIR]):
-                    tem_name = trace_name[len(DIR_PREFIX[GLOBALS_DIR]):]
-                    path_list = tem_name.replace(PATH_SEP, ".").split(".")
-                    trace_value = self.get_subdir(self.globals_dict, path_list, value=True)
-                    if len(path_list) > 1:
-                        parent_obj = self.get_subdir(self.globals_dict, path_list[:-1], value=True)
-                    else:
-                        parent_obj = self.get_main_module()
-
-                elif trace_name.startswith(DIR_PREFIX[DATABASE_DIR]):
-                    tracing_key = True
-                    trace_value = trace_name[len(DIR_PREFIX[DATABASE_DIR]):] + PATH_SEP
-
-                elif trace_name == "*" or trace_name[0] == TRACE_LABEL_PREFIX or trace_name.startswith(TRACE_LOG_PREFIX):
-                    trace_value = trace_name
-
-                elif self.get_base_subdir() == DATABASE_DIR:
-                    # Relative database path
-                    tracing_key = True
-                    full_path = self.full_path_comps(trace_name)
-                    trace_value = PATH_SEP + PATH_SEP.join(full_path[1:])
-
-                else:
-                    # Other relative path
-                    path_list = trace_name.replace(PATH_SEP, ".").split(".")
-                    trace_value = self.get_subdir(self.locals_dict, path_list, value=True)
-                    parent_obj = None
-                    if inspect.ismethod(trace_value):
-                        method_self = getattr(trace_value, "__self__", None)
-                        if method_self:
-                            if inspect.isclass(method_self):
-                                parent_obj = method_self
-                            else:
-                                parent_obj = getattr(method_self, "__class__", None)
-
-                    if not parent_obj:
-                        if self.get_base_subdir() != GLOBALS_DIR:
-                            return (out_str, "Must be in subdirectory of globals to trace")
-                        if len(path_list) > 1:
-                            parent_obj = self.get_subdir(self.locals_dict, path_list[:-1], value=True)
-                        else:
-                            parent_obj = self.get_cur_value()
-
-                if comps:
-                     return (out_str, "Multiple objects in trace command not yet implemented: %s" % comps)
-
-                if trace_value is None:
-                    return (out_str, "Invalid class/method/key for tracing: " + str(trace_name))
-
-                if trace_condition:
-                    try:
-                        argmatch = match_parse(trace_condition)
-                    except Exception:
-                        return (out_str, "Invalid trace arg/attr match: " + trace_condition)
-
-                    if argmatch:
-                        pass
-                    elif tracing_key:
-                        if trace_condition in ("get", "put", "delete", "modify", "all"):
-                            access_type = trace_condition
-                        else:
-                            return (out_str, "Invalid trace access type: " + trace_condition)
-                    elif trace_condition.startswith("tagged"):
-                        match_tag = trace_condition[6:] if len(trace_condition) > 6 else "*"
-                    elif trace_condition == "call":
-                        trace_call = True
-                    elif trace_condition == "return":
-                        trace_return = True
-                    elif trace_condition == "all":
-                        trace_call = True
-                        trace_return = True
-                    else:
-                        return (out_str, "Invalid trace condition " + trace_condition)
-
-                if break_action == "tag":
-                    trace_call = False
-                    trace_return = True
-
-                if tracing_key:
-                    if not access_type:
-                        access_type = "modify"
-                    key_path = trace_value.split(PATH_SEP)
-                    if ENTITY_CHAR in key_path or DATABASE_DIR not in self.lazy_dirs:
-                        return (out_str, "Invalid trace key")
-                    else:
-                        key = self.lazy_dirs[DATABASE_DIR].key_from_path(key_path)
-                        if not key:
-                            return (out_str, "Invalid trace key: " + trace_value)
-                        else:
-                            trace_value = str(key)
-
-                with Trace_rlock:
-                    # Setup tracing
-                    if inspect.isclass(trace_value):
-                        OTrace.trace_entity(trace_value)
-                    elif inspect.isclass(parent_obj) and (inspect.ismethod(trace_value) or inspect.isfunction(trace_value)):
-                        OTrace.trace_method(parent_obj, trace_value)
-                    elif inspect.ismodule(parent_obj) and inspect.isfunction(trace_value):
-                        OTrace.trace_modulefunction(parent_obj, trace_value)
-                    elif not isinstance(trace_value, basestring):
-                        return (out_str, "Cannot trace %s" % type(trace_value))
-
-                    fullname = OTrace.add_trace(trace_value, parent=parent_obj, argmatch=argmatch,
-                                                trace_call=trace_call, trace_return=trace_return,
-                                                break_count=break_count, break_action=break_action,
-                                                match_tag=match_tag, access_type=access_type)
-                    out_str = "Tracing " + str(OTrace.trace_names[fullname])
-
-            return (out_str, err_str)
+            # Initiate tracing
+            return self.cmd_trace(cmd, comps, line, rem_line)
 
         elif cmd == "untrace":
             trace_name = ""
@@ -2741,306 +2595,12 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             return (out_str, err_str)
 
         elif cmd in ("ls", "rm"):
-            # List "directory"
-            recursive = False
-            base_class = None
-            time_sort_key = None
-            ls_show = set()
-            show_attr = False
-            show_long = False
-            if cmd == "rm":
-                if Set_params["safe_mode"]:
-                    return (out_str, "rm: deletion not permitted in safe mode; set safe_mode False")
-                elif not self.lazy_dirs:
-                    return (out_str, "rm: no database connected")
-                elif comps and comps[0] == "-r":
-                    recursive = True
-                    comps.pop(0)
-            elif cmd == "ls":
-                while comps and comps[0].startswith("-"):
-                    comp = comps.pop(0)
-                    if comp.startswith("-."):
-                        # Exclude attributes of current/super class
-                        base_name = comp[2:]
-                        if base_name[:1].isalpha():
-                            # Exclude attributes of "-.classname"
-                            path_list = base_name.split(".")
-                            value = self.get_subdir(self.locals_dict, path_list, value=True)
-                            if not value:
-                                value = self.get_subdir(self.globals_dict, path_list, value=True)
-                            if inspect.isclass(value):
-                                base_class = value
-                        else:
-                            cur_value = self.get_cur_value()
-                            if cur_value is None:
-                                cur_class = self.locals_dict.get("__class__", None)
-                            elif inspect.isclass(cur_value):
-                                cur_class = cur_value
-                            else:
-                                cur_class = getattr(cur_value, "__class__", None)
-                            if not base_name:
-                                # Exclude attributes of current class
-                                base_class = cur_class
-                            elif cur_class:
-                                # Exclude attributes of super class (if defined)
-                                mro_classes = inspect.getmro(cur_class)
-                                base_class = mro_classes[min(len(base_name),len(mro_classes)-1)]
-                    else:
-                        # Single character options
-                        for opt in comp[1:]:
-                            if opt == "a":
-                                show_attr = True
-                            elif opt == "c":
-                                ls_show.add("class")
-                            elif opt == "f":
-                                ls_show.add("function")
-                            elif opt == "l":
-                                show_long = True
-                            elif opt == "m":
-                                ls_show.add("module")
-                            elif opt == "t":
-                                # Time ordering
-                                if self.get_base_subdir() in (ALL_DIR, RECENT_DIR, SAVED_DIR):
-                                    time_sort_key = lambda x:ContextDict.split_trace_id(os.path.split(x)[1])[3]
-                            elif opt == "v":
-                                ls_show.add("variable")
-                            else:
-                                pass # ignore other options
-
-            globals_or_locals = self.get_base_subdir() in (GLOBALS_DIR, LOCALS_DIR)
-            if not comps:
-                if cmd == "rm":
-                    return (out_str, "rm: specify entities to delete")
-                # Display list of "subdirectories"
-                matches = self.locals_dict.keys()
-            else:
-                # Display/delete specified directories
-                matches = []
-                for comp in comps:
-                    if comp == PATH_SEP:
-                        # Root directory
-                        matches += [PATH_SEP]
-                    elif comp == ".":
-                        # Current directory
-                        matches += self.make_path_str()
-                    else:
-                        comp_dir = expanduser(comp)
-                        fullpath = self.cur_fullpath
-                        absolute = is_absolute_path(comp_dir)
-                        if absolute:
-                            comp_dir = comp_dir[1:]
-                            fullpath = []
-                        elif PATH_SEP not in comp_dir and comp_dir.find("..") == -1 and globals_or_locals:
-                            # Relative path
-                            comp_dir = comp_dir.replace(".", PATH_SEP)
-                        assert comp_dir
-                        path_list = comp_dir.split(PATH_SEP)
-                        comp_matches = self.path_matches(fullpath, path_list, absolute=absolute)
-                        if not comp_matches and ENTITY_CHAR in path_list:
-                            # Accept entity property names as matches
-                            comp_matches = [comp_dir]
-                        matches += comp_matches
-
-            if base_class:
-                matches = [attr for attr in matches if not hasattr(base_class, attr)]
-            if not show_attr:
-                matches = [attr for attr in matches if attr in SHOW_HIDDEN or not (attr.startswith("__") and attr.endswith("__"))]
-
-            if not matches and comps:
-                return (out_str, "no matches '%s'" % (line.strip(),))
-
-            if time_sort_key:
-                try:
-                    matches.sort(key=time_sort_key)
-                except Exception:
-                    matches.sort()
-            else:
-                matches.sort()
-
-            if cmd == "ls":
-                # List
-                _, cur_dir_path = self.get_prompt()
-                max_width = min(self.tty_width//3 - 1, max([len(key) for key in matches]) if matches else 2)
-                fmt = "%-"+str(max_width)+"s"
-
-                path_attrs = OrderedDict()
-                out_list = []
-                for j, dir_path in enumerate(matches):
-                    if is_absolute_path(dir_path):
-                        path_list = dir_path[1:].split(PATH_SEP)[BASE_OFFSET:]
-                        locals_dict = OTrace.base_context
-                    else:
-                        if dir_path and PATH_SEP not in dir_path and dir_path.find("..") == -1 and globals_or_locals:
-                            # Replace . with /
-                            dir_path = dir_path.replace(".", PATH_SEP)
-                        path_list = dir_path.split(PATH_SEP)
-                        locals_dict = self.locals_dict
-
-                    full_path = self.full_path_comps(dir_path)
-
-                    if ENTITY_CHAR in path_list:
-                        key_comps, sub_comps, entity_key = self.entity_path_comps(full_path)
-                        if entity_key and full_path[BASE_OFFSET] in self.lazy_dirs:
-                            entity = self.lazy_dirs[full_path[BASE_OFFSET]].get_entity(entity_key)
-                            path_list = sub_comps
-                            if isinstance(entity, dict):
-                                locals_dict = entity
-                            elif entity:
-                                locals_dict = ObjectDict(entity)
-                            else:
-                                locals_dict = {}
-                    if not base_class or not hasattr(base_class, path_list[-1]):
-                        value = self.get_subdir(locals_dict, path_list, value=True)
-                        if inspect.isclass(value):
-                            value_type = "class"
-                        elif inspect.isfunction(value) or inspect.ismethod(value):
-                            value_type = "function"
-                        elif inspect.ismodule(value):
-                            value_type = "module"
-                        else:
-                            value_type = "variable"
-
-                        if ls_show and value_type not in ls_show:
-                            # Not displaying this type of value
-                            continue
-
-                        if isinstance(value, (dict, weakref.WeakValueDictionary)):
-                            value_str = "{%s}" % (", ".join(map(str, value.keys())), )
-                        elif isinstance(value, LineList):
-                            value_str = "[%s]" % (value,)
-                        elif isinstance(value, (list, tuple)):
-                            value_str = "[%s]" % (", ".join(map(str, value)), )
-                        else:
-                            value_str = repr(value)
-
-                        mime, command = get_obj_properties(value, full_path=full_path)
-                        markup = ["file://"+urllib.quote(cur_dir_path+PATH_SEP+dir_path), "x-python/"+mime, command]
-                        path_attrs[dir_path] = markup
-
-                        if show_long:
-                            if Set_params["allow_xml"] and OTrace.html_wrapper:
-                                s = str(dir_path)
-                                fmt_value = self.html_fmt % tuple(markup + [s])
-                                if len(s) < max_width:
-                                    fmt_value += " "*(max_width-len(s))
-                                out_list.append( fmt_value + " = " + cgi.escape(value_str) + "\n")
-                            else:
-                                fmt_value = fmt % dir_path
-                                out_list.append( fmt_value + " = " + value_str + "\n")
-
-                            if not((j+1) % 5):
-                                out_list.append("\n")
-                            
-                if show_long:
-                    out_str = "".join(out_list)
-                else:
-                    # Display names only
-                    if Set_params["allow_xml"] and OTrace.html_wrapper:
-                        if len(self.cur_fullpath) > 1:
-                            parent_path = self.make_path_str(self.cur_fullpath[:-1])
-                            default_path = self.make_path_str(self.get_default_dir())
-                            path_attrs[".."] = ["file://"+urllib.quote(parent_path), "x-python/object", "cdls"]
-                            path_attrs["."] = ["file://"+urllib.quote(cur_dir_path), "x-python/object", "cdls"]
-                            path_attrs["~~"] = ["file://"+urllib.quote(default_path), "x-python/object", "cdls"]
-                        out_str = self.line_wrap(path_attrs.keys(), html_attrs=path_attrs, tail_count=3)
-                    else:
-                        out_str = self.line_wrap(path_attrs.keys())
-
-                if Set_params["allow_xml"] and OTrace.html_wrapper:
-                    out_str =  OTrace.html_wrapper.wrap('<pre>'+out_str+'</pre>')
-                return (out_str, err_str)
-
-            # rm (for database)
-            out_list = []
-            delete_lists = collections.defaultdict(list)
-            for j, dir_path in enumerate(matches):
-                full_path = self.full_path_comps(dir_path)
-                base_subdir = full_path[BASE_OFFSET]
-                if len(full_path) < BASE2_OFFSET or base_subdir not in self.lazy_dirs or ENTITY_CHAR in full_path:
-                    err_str += "Invalid path: " +dir_path+" "
-                else:
-                    entity_key = self.lazy_dirs[base_subdir].key_from_path(full_path[BASE1_OFFSET:])
-                    if not entity_key:
-                        err_str += "Invalid path: " +dir_path+" "
-                    else:
-                        delete_lists[base_subdir].append(entity_key)
-
-            if not err_str and delete_lists:
-                for base_subdir, key_list in delete_lists.items():
-                    deleted_keys = self.lazy_dirs[base_subdir].delete_entities(key_list, recursive=recursive)
-                    out_list += "Deleted %s keys" % len(deleted_keys)
-
-            out_str = "".join(out_list)
-            return (out_str, err_str)
+            # List "directory" or 'remove' entries
+            return self.cmd_lsrm(cmd, comps, line, rem_line)
 
         elif cmd == "set":
             # Set (or display) parameters
-            if len(comps) > 1:
-                # Set parameter
-                try:
-                    name, value = comps[0:2]
-                    if value == "None":
-                        value = None
-                    if name not in Help_params:
-                        return ("", "Invalid parameter: "+name)
-                    if name == "log_format":
-                        OTrace.callback_handler.logformat(value.replace("+", " "))
-                    elif name == "log_level":
-                        OTrace.callback_handler.loglevel(int(value))
-                    elif name == "log_remote":
-                        OTrace.callback_handler.remote_log(value, remove=(not value))
-                    elif name == "log_truncate":
-                        OTrace.callback_handler.tracelen(int(value))
-                    elif name == "pickle_file":
-                        if PickleInterface.write_connection:
-                            PickleInterface.write_connection.close()
-                            PickleInterface.write_connection = None
-                        if value:
-                            PickleInterface.create_pickle_db(expandpath(value))
-                    elif name == "unpickle_file":
-                        pass
-                    elif name == "trace_active":
-                        OTrace.trace_active = bool(value)
-                    else:
-                        param_type = type(Set_params[name])
-                        if param_type is bool:
-                            value = (value.lower() == "true")
-                        else:
-                            value = param_type(value)
-                        if name == "safe_mode" and not self.allow_unsafe and not value:
-                            return ("", "Switching to unsafe mode not permitted")
-                        if name == "password" and ":" not in value:
-                            return ("", "No salt in encrypted password; SET PASSWORD FAILED")
-                        Set_params[name] = value
-                except Exception, excp:
-                    return (out_str, "Error in setting parameter %s: %s" % (name, excp))
-                return ("%s = %s" % (name, value), "")
-            else:
-                # Display parameters
-                names = []
-                if not comps:
-                    names = Help_params.keys()
-                elif len(comps) == 1 and comps[0] in Help_params:
-                    names = [comps[0]]
-                for name in names:
-                    if name == "log_format":
-                        value = OTrace.callback_handler.logformat().replace(" ", "+")
-                    elif name == "log_level":
-                        value = OTrace.callback_handler.loglevel()
-                    elif name == "log_remote":
-                        value = OTrace.callback_handler.remote_log()
-                    elif name == "log_truncate":
-                        value = OTrace.callback_handler.tracelen()
-                    elif name == "pickle_file":
-                        value = PickleInterface.write_file
-                    elif name == "unpickle_file":
-                        value = PickleInterface.read_file
-                    elif name == "trace_active":
-                       value = OTrace.trace_active
-                    else:
-                        value = Set_params[name]
-                    out_str += "%s = %s\n" % (name, value)
-                return (out_str, err_str)
+            return self.cmd_set(cmd, comps, line, rem_line)
 
         elif cmd == "view":
             obj_path = self.make_path_str()
@@ -3229,8 +2789,466 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         return out_str, err_str
 
-    def cd(self, new_dir):
-        """cd to new_dir, returning (out_str, err_str)."""
+    def cmd_trace(self, cmd, comps, line, rem_line):
+        """Initiate tracing, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        trace_name = ""
+        trace_call = False
+        trace_return = False
+        match_tag = ""
+        argmatch = {}
+        access_type = ""
+        fullname = ""
+
+        trace_condition = None
+        break_action = None
+        break_count = 0
+        while comps and comps[0].startswith("-"):
+            comp = comps.pop(0)
+            if comp in ("-a", "-c", "-n") and not comps:
+                return (out_str, "Missing argument for option %s" % comp)
+            if comp == "-a":
+                if comps[0] in TRACE_ACTIONS:
+                    break_action = comps.pop(0)
+                else:
+                    return (out_str, "Expected one of %s for option %s" % (comp, TRACE_ACTIONS))
+            elif comp == "-c":
+                trace_condition = comps.pop(0)
+            elif comp == "-n":
+                if comps[0].isdigit() or (comps[0][1:].isdigit() and comps[0][0] in "+-"):
+                    break_count = int(comps.pop(0))
+                else:
+                    return (out_str, "Expected integer argument for option %s" % comp)
+            else:
+                return (out_str, "Invalid option %s" % comp)
+
+        if not comps:
+            keys = OTrace.trace_names.keys()
+            keys.sort()
+            out_str = "\n".join(str(OTrace.trace_names[k]) for k in keys)
+        else:
+            trace_name = comps.pop(0)
+            trace_value = None
+            tracing_key = False
+            parent_obj = None
+            if trace_name.startswith(DIR_PREFIX[GLOBALS_DIR]):
+                tem_name = trace_name[len(DIR_PREFIX[GLOBALS_DIR]):]
+                path_list = tem_name.replace(PATH_SEP, ".").split(".")
+                trace_value = self.get_subdir(self.globals_dict, path_list, value=True)
+                if len(path_list) > 1:
+                    parent_obj = self.get_subdir(self.globals_dict, path_list[:-1], value=True)
+                else:
+                    parent_obj = self.get_main_module()
+
+            elif trace_name.startswith(DIR_PREFIX[DATABASE_DIR]):
+                tracing_key = True
+                trace_value = trace_name[len(DIR_PREFIX[DATABASE_DIR]):] + PATH_SEP
+
+            elif trace_name == "*" or trace_name[0] == TRACE_LABEL_PREFIX or trace_name.startswith(TRACE_LOG_PREFIX):
+                trace_value = trace_name
+
+            elif self.get_base_subdir() == DATABASE_DIR:
+                # Relative database path
+                tracing_key = True
+                full_path = self.full_path_comps(trace_name)
+                trace_value = PATH_SEP + PATH_SEP.join(full_path[1:])
+
+            else:
+                # Other relative path
+                path_list = trace_name.replace(PATH_SEP, ".").split(".")
+                trace_value = self.get_subdir(self.locals_dict, path_list, value=True)
+                parent_obj = None
+                if inspect.ismethod(trace_value):
+                    method_self = getattr(trace_value, "__self__", None)
+                    if method_self:
+                        if inspect.isclass(method_self):
+                            parent_obj = method_self
+                        else:
+                            parent_obj = getattr(method_self, "__class__", None)
+
+                if not parent_obj:
+                    if self.get_base_subdir() != GLOBALS_DIR:
+                        return (out_str, "Must be in subdirectory of globals to trace")
+                    if len(path_list) > 1:
+                        parent_obj = self.get_subdir(self.locals_dict, path_list[:-1], value=True)
+                    else:
+                        parent_obj = self.get_cur_value()
+
+            if comps:
+                 return (out_str, "Multiple objects in trace command not yet implemented: %s" % comps)
+
+            if trace_value is None:
+                return (out_str, "Invalid class/method/key for tracing: " + str(trace_name))
+
+            if trace_condition:
+                try:
+                    argmatch = match_parse(trace_condition)
+                except Exception:
+                    return (out_str, "Invalid trace arg/attr match: " + trace_condition)
+
+                if argmatch:
+                    pass
+                elif tracing_key:
+                    if trace_condition in ("get", "put", "delete", "modify", "all"):
+                        access_type = trace_condition
+                    else:
+                        return (out_str, "Invalid trace access type: " + trace_condition)
+                elif trace_condition.startswith("tagged"):
+                    match_tag = trace_condition[6:] if len(trace_condition) > 6 else "*"
+                elif trace_condition == "call":
+                    trace_call = True
+                elif trace_condition == "return":
+                    trace_return = True
+                elif trace_condition == "all":
+                    trace_call = True
+                    trace_return = True
+                else:
+                    return (out_str, "Invalid trace condition " + trace_condition)
+
+            if break_action == "tag":
+                trace_call = False
+                trace_return = True
+
+            if tracing_key:
+                if not access_type:
+                    access_type = "modify"
+                key_path = trace_value.split(PATH_SEP)
+                if ENTITY_CHAR in key_path or DATABASE_DIR not in self.lazy_dirs:
+                    return (out_str, "Invalid trace key")
+                else:
+                    key = self.lazy_dirs[DATABASE_DIR].key_from_path(key_path)
+                    if not key:
+                        return (out_str, "Invalid trace key: " + trace_value)
+                    else:
+                        trace_value = str(key)
+
+            with Trace_rlock:
+                # Setup tracing
+                if inspect.isclass(trace_value):
+                    OTrace.trace_entity(trace_value)
+                elif inspect.isclass(parent_obj) and (inspect.ismethod(trace_value) or inspect.isfunction(trace_value)):
+                    OTrace.trace_method(parent_obj, trace_value)
+                elif inspect.ismodule(parent_obj) and inspect.isfunction(trace_value):
+                    OTrace.trace_modulefunction(parent_obj, trace_value)
+                elif not isinstance(trace_value, basestring):
+                    return (out_str, "Cannot trace %s" % type(trace_value))
+
+                fullname = OTrace.add_trace(trace_value, parent=parent_obj, argmatch=argmatch,
+                                            trace_call=trace_call, trace_return=trace_return,
+                                            break_count=break_count, break_action=break_action,
+                                            match_tag=match_tag, access_type=access_type)
+                out_str = "Tracing " + str(OTrace.trace_names[fullname])
+
+        return (out_str, err_str)
+
+
+    def cmd_lsrm(self, cmd, comps, line, rem_line):
+        """'List' directory or 'remove' entries, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        recursive = False
+        base_class = None
+        time_sort_key = None
+        ls_show = set()
+        show_attr = False
+        show_long = False
+
+        if cmd == "rm":
+            if Set_params["safe_mode"]:
+                return (out_str, "rm: deletion not permitted in safe mode; set safe_mode False")
+            elif not self.lazy_dirs:
+                return (out_str, "rm: no database connected")
+            elif comps and comps[0] == "-r":
+                recursive = True
+                comps.pop(0)
+        elif cmd == "ls":
+            while comps and comps[0].startswith("-"):
+                comp = comps.pop(0)
+                if comp.startswith("-."):
+                    # Exclude attributes of current/super class
+                    base_name = comp[2:]
+                    if base_name[:1].isalpha():
+                        # Exclude attributes of "-.classname"
+                        path_list = base_name.split(".")
+                        value = self.get_subdir(self.locals_dict, path_list, value=True)
+                        if not value:
+                            value = self.get_subdir(self.globals_dict, path_list, value=True)
+                        if inspect.isclass(value):
+                            base_class = value
+                    else:
+                        cur_value = self.get_cur_value()
+                        if cur_value is None:
+                            cur_class = self.locals_dict.get("__class__", None)
+                        elif inspect.isclass(cur_value):
+                            cur_class = cur_value
+                        else:
+                            cur_class = getattr(cur_value, "__class__", None)
+                        if not base_name:
+                            # Exclude attributes of current class
+                            base_class = cur_class
+                        elif cur_class:
+                            # Exclude attributes of super class (if defined)
+                            mro_classes = inspect.getmro(cur_class)
+                            base_class = mro_classes[min(len(base_name),len(mro_classes)-1)]
+                else:
+                    # Single character options
+                    for opt in comp[1:]:
+                        if opt == "a":
+                            show_attr = True
+                        elif opt == "c":
+                            ls_show.add("class")
+                        elif opt == "f":
+                            ls_show.add("function")
+                        elif opt == "l":
+                            show_long = True
+                        elif opt == "m":
+                            ls_show.add("module")
+                        elif opt == "t":
+                            # Time ordering
+                            if self.get_base_subdir() in (ALL_DIR, RECENT_DIR, SAVED_DIR):
+                                time_sort_key = lambda x:ContextDict.split_trace_id(os.path.split(x)[1])[3]
+                        elif opt == "v":
+                            ls_show.add("variable")
+                        else:
+                            pass # ignore other options
+
+        globals_or_locals = self.get_base_subdir() in (GLOBALS_DIR, LOCALS_DIR)
+        if not comps:
+            if cmd == "rm":
+                return (out_str, "rm: specify entities to delete")
+            # Display list of "subdirectories"
+            matches = self.locals_dict.keys()
+        else:
+            # Display/delete specified directories
+            matches = []
+            for comp in comps:
+                if comp == PATH_SEP:
+                    # Root directory
+                    matches += [PATH_SEP]
+                elif comp == ".":
+                    # Current directory
+                    matches += self.make_path_str()
+                else:
+                    comp_dir = expanduser(comp)
+                    fullpath = self.cur_fullpath
+                    absolute = is_absolute_path(comp_dir)
+                    if absolute:
+                        comp_dir = comp_dir[1:]
+                        fullpath = []
+                    elif PATH_SEP not in comp_dir and comp_dir.find("..") == -1 and globals_or_locals:
+                        # Relative path
+                        comp_dir = comp_dir.replace(".", PATH_SEP)
+                    assert comp_dir
+                    path_list = comp_dir.split(PATH_SEP)
+                    comp_matches = self.path_matches(fullpath, path_list, absolute=absolute)
+                    if not comp_matches and ENTITY_CHAR in path_list:
+                        # Accept entity property names as matches
+                        comp_matches = [comp_dir]
+                    matches += comp_matches
+
+        if base_class:
+            matches = [attr for attr in matches if not hasattr(base_class, attr)]
+        if not show_attr:
+            matches = [attr for attr in matches if attr in SHOW_HIDDEN or not (attr.startswith("__") and attr.endswith("__"))]
+
+        if not matches and comps:
+            return (out_str, "no matches '%s'" % (line.strip(),))
+
+        if time_sort_key:
+            try:
+                matches.sort(key=time_sort_key)
+            except Exception:
+                matches.sort()
+        else:
+            matches.sort()
+
+        if cmd == "ls":
+            # List
+            _, cur_dir_path = self.get_prompt()
+            max_width = min(self.tty_width//3 - 1, max([len(key) for key in matches]) if matches else 2)
+            fmt = "%-"+str(max_width)+"s"
+
+            path_attrs = OrderedDict()
+            out_list = []
+            for j, dir_path in enumerate(matches):
+                if is_absolute_path(dir_path):
+                    path_list = dir_path[1:].split(PATH_SEP)[BASE_OFFSET:]
+                    locals_dict = OTrace.base_context
+                else:
+                    if dir_path and PATH_SEP not in dir_path and dir_path.find("..") == -1 and globals_or_locals:
+                        # Replace . with /
+                        dir_path = dir_path.replace(".", PATH_SEP)
+                    path_list = dir_path.split(PATH_SEP)
+                    locals_dict = self.locals_dict
+
+                full_path = self.full_path_comps(dir_path)
+
+                if ENTITY_CHAR in path_list:
+                    key_comps, sub_comps, entity_key = self.entity_path_comps(full_path)
+                    if entity_key and full_path[BASE_OFFSET] in self.lazy_dirs:
+                        entity = self.lazy_dirs[full_path[BASE_OFFSET]].get_entity(entity_key)
+                        path_list = sub_comps
+                        if isinstance(entity, dict):
+                            locals_dict = entity
+                        elif entity:
+                            locals_dict = ObjectDict(entity)
+                        else:
+                            locals_dict = {}
+                if not base_class or not hasattr(base_class, path_list[-1]):
+                    value = self.get_subdir(locals_dict, path_list, value=True)
+                    if inspect.isclass(value):
+                        value_type = "class"
+                    elif inspect.isfunction(value) or inspect.ismethod(value):
+                        value_type = "function"
+                    elif inspect.ismodule(value):
+                        value_type = "module"
+                    else:
+                        value_type = "variable"
+
+                    if ls_show and value_type not in ls_show:
+                        # Not displaying this type of value
+                        continue
+
+                    if isinstance(value, (dict, weakref.WeakValueDictionary)):
+                        value_str = "{%s}" % (", ".join(map(str, value.keys())), )
+                    elif isinstance(value, LineList):
+                        value_str = "[%s]" % (value,)
+                    elif isinstance(value, (list, tuple)):
+                        value_str = "[%s]" % (", ".join(map(str, value)), )
+                    else:
+                        value_str = repr(value)
+
+                    mime, command = get_obj_properties(value, full_path=full_path)
+                    markup = ["file://"+urllib.quote(cur_dir_path+PATH_SEP+dir_path), "x-python/"+mime, command]
+                    path_attrs[dir_path] = markup
+
+                    if show_long:
+                        if Set_params["allow_xml"] and OTrace.html_wrapper:
+                            s = str(dir_path)
+                            fmt_value = self.html_fmt % tuple(markup + [s])
+                            if len(s) < max_width:
+                                fmt_value += " "*(max_width-len(s))
+                            out_list.append( fmt_value + " = " + cgi.escape(value_str) + "\n")
+                        else:
+                            fmt_value = fmt % dir_path
+                            out_list.append( fmt_value + " = " + value_str + "\n")
+
+                        if not((j+1) % 5):
+                            out_list.append("\n")
+
+            if show_long:
+                out_str = "".join(out_list)
+            else:
+                # Display names only
+                if Set_params["allow_xml"] and OTrace.html_wrapper:
+                    if len(self.cur_fullpath) > 1:
+                        parent_path = self.make_path_str(self.cur_fullpath[:-1])
+                        default_path = self.make_path_str(self.get_default_dir())
+                        path_attrs[".."] = ["file://"+urllib.quote(parent_path), "x-python/object", "cdls"]
+                        path_attrs["."] = ["file://"+urllib.quote(cur_dir_path), "x-python/object", "cdls"]
+                        path_attrs["~~"] = ["file://"+urllib.quote(default_path), "x-python/object", "cdls"]
+                    out_str = self.line_wrap(path_attrs.keys(), html_attrs=path_attrs, tail_count=3)
+                else:
+                    out_str = self.line_wrap(path_attrs.keys())
+
+            if Set_params["allow_xml"] and OTrace.html_wrapper:
+                out_str =  OTrace.html_wrapper.wrap('<pre>'+out_str+'</pre>')
+            return (out_str, err_str)
+
+        # rm (for database)
+        out_list = []
+        delete_lists = collections.defaultdict(list)
+        for j, dir_path in enumerate(matches):
+            full_path = self.full_path_comps(dir_path)
+            base_subdir = full_path[BASE_OFFSET]
+            if len(full_path) < BASE2_OFFSET or base_subdir not in self.lazy_dirs or ENTITY_CHAR in full_path:
+                err_str += "Invalid path: " +dir_path+" "
+            else:
+                entity_key = self.lazy_dirs[base_subdir].key_from_path(full_path[BASE1_OFFSET:])
+                if not entity_key:
+                    err_str += "Invalid path: " +dir_path+" "
+                else:
+                    delete_lists[base_subdir].append(entity_key)
+
+        if not err_str and delete_lists:
+            for base_subdir, key_list in delete_lists.items():
+                deleted_keys = self.lazy_dirs[base_subdir].delete_entities(key_list, recursive=recursive)
+                out_list += "Deleted %s keys" % len(deleted_keys)
+
+        out_str = "".join(out_list)
+        return (out_str, err_str)
+
+    def cmd_set(self, cmd, comps, line, rem_line):
+        """set or display parameters, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        if len(comps) > 1:
+            # Set parameter
+            try:
+                name, value = comps[0:2]
+                if value == "None":
+                    value = None
+                if name not in Help_params:
+                    return ("", "Invalid parameter: "+name)
+                if name == "log_format":
+                    OTrace.callback_handler.logformat(value.replace("+", " "))
+                elif name == "log_level":
+                    OTrace.callback_handler.loglevel(int(value))
+                elif name == "log_remote":
+                    OTrace.callback_handler.remote_log(value, remove=(not value))
+                elif name == "log_truncate":
+                    OTrace.callback_handler.tracelen(int(value))
+                elif name == "pickle_file":
+                    if PickleInterface.write_connection:
+                        PickleInterface.write_connection.close()
+                        PickleInterface.write_connection = None
+                    if value:
+                        PickleInterface.create_pickle_db(expandpath(value))
+                elif name == "unpickle_file":
+                    pass
+                elif name == "trace_active":
+                    OTrace.trace_active = bool(value)
+                else:
+                    param_type = type(Set_params[name])
+                    if param_type is bool:
+                        value = (value.lower() == "true")
+                    else:
+                        value = param_type(value)
+                    if name == "safe_mode" and not self.allow_unsafe and not value:
+                        return ("", "Switching to unsafe mode not permitted")
+                    if name == "password" and ":" not in value:
+                        return ("", "No salt in encrypted password; SET PASSWORD FAILED")
+                    Set_params[name] = value
+            except Exception, excp:
+                return (out_str, "Error in setting parameter %s: %s" % (name, excp))
+            return ("%s = %s" % (name, value), "")
+        else:
+            # Display parameters
+            names = []
+            if not comps:
+                names = Help_params.keys()
+            elif len(comps) == 1 and comps[0] in Help_params:
+                names = [comps[0]]
+            for name in names:
+                if name == "log_format":
+                    value = OTrace.callback_handler.logformat().replace(" ", "+")
+                elif name == "log_level":
+                    value = OTrace.callback_handler.loglevel()
+                elif name == "log_remote":
+                    value = OTrace.callback_handler.remote_log()
+                elif name == "log_truncate":
+                    value = OTrace.callback_handler.tracelen()
+                elif name == "pickle_file":
+                    value = PickleInterface.write_file
+                elif name == "unpickle_file":
+                    value = PickleInterface.read_file
+                elif name == "trace_active":
+                   value = OTrace.trace_active
+                else:
+                    value = Set_params[name]
+                out_str += "%s = %s\n" % (name, value)
+            return (out_str, err_str)
+
+    def cmd_cd(self, new_dir):
+        """cd to new_dir, returning (out_str, err_str)"""
         out_str, err_str = "", ""
         cur_path = [comp[INAME] for comp in self.cur_fullpath]
         if new_dir == ENTITY_CHAR and ENTITY_CHAR not in self.locals_dict and ENTITY_CHAR in cur_path:
