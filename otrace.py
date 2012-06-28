@@ -2088,11 +2088,13 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         err_str = ""
 
         # Handle shell, javascript, and selected oshell commands
-        redirect_in = None
-        redirect_out = None
-        edit_opt_force = False
-        view_opt_inline = False
-        view_opt_docstr = False
+        cmd_opts = type('Bunch', (object,),
+                        dict(redirect_in=None,
+                             redirect_out=None,
+                             edit_force=False,
+                             view_inline=False,
+                             view_docstr=False) )
+        
         if cmd == "quit":
             err_str = "Shutting down..."
             self.shutdown()
@@ -2207,11 +2209,11 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             while comps:
                 # View options
                 if comps[0] == "-d":
-                    view_opt_docstr = True
+                    cmd_opts.view_docstr = True
                 elif comps[0] == "-f":
-                    edit_opt_force = True
+                    cmd_opts.edit_force = True
                 elif comps[0] == "-i":
-                    view_opt_inline = True
+                    cmd_opts.view_inline = True
                 else:
                     break
                 comps.pop(0)
@@ -2228,10 +2230,10 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 while True:
                     # Strip out file redirection from token
                     if comp0.find("<") > comp0.find(">"):
-                        comp0, sep, redirect_in = comp0.rpartition("<")
+                        comp0, sep, cmd_opts.redirect_in = comp0.rpartition("<")
                         continue
                     if comp0.find(">") > comp0.find("<"):
-                        comp0, sep, redirect_out = comp0.rpartition(">")
+                        comp0, sep, cmd_opts.redirect_out = comp0.rpartition(">")
                         continue
                     break
 
@@ -2250,14 +2252,14 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     else:
                         return ("", "Cannot edit/view multiples files: %s" % comp0)
 
-                if cmd == "edit" and redirect_in == "" and here_doc is None:
+                if cmd == "edit" and cmd_opts.redirect_in == "" and here_doc is None:
                     return ("", "Expecting here_doc input for editing %s" % comp0)
 
                 comps = [comp0] + comps
 
             if cmd != "unpatch":
                 try:
-                    return self.edit_view(cmd, comps, inline=view_opt_inline, here_doc=here_doc)
+                    return self.edit_view(cmd, comps, inline=cmd_opts.view_inline, here_doc=here_doc)
                 except AltHandler:
                     pass    # Handle edit/unpatch/view command for /osh/*
 
@@ -2407,9 +2409,9 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if cmd == "edit":
                 if inspect.isclass(old_obj):
                     return ("", "Class patching not yet implemented; patch methods individually")
-                if redirect_in:
+                if cmd_opts.redirect_in:
                     # Read patch from file
-                    filename = expanduser(redirect_in)
+                    filename = expanduser(cmd_opts.redirect_in)
                     if not is_absolute_path(filename):
                         return (out_str, "Must specify absolute pathname for input file %s" % filename)
                     try:
@@ -2428,7 +2430,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     except Exception, excp:
                         return (out_str, "Error in accessing source: %s" % excp)
 
-                    if not start_line and not edit_opt_force:
+                    if not start_line and not cmd_opts.edit_force:
                         return (out_str, "Error: specify '-f' option to force editing of patched file")
 
                     content = "".join(de_indent(lines))
@@ -2465,7 +2467,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
                     func = patch_locals.values()[0]
                     out_str += "Patched " + patch_name + ":"
-                    patched_obj = OTrace.monkey_patch(func, old_obj, parent_obj, repatch=edit_opt_force,
+                    patched_obj = OTrace.monkey_patch(func, old_obj, parent_obj, repatch=cmd_opts.edit_force,
                                                       source=mod_lines)
                     if patched_obj:
                         OTrace.base_context[PATCHES_DIR][patch_name] = patched_obj
@@ -2480,7 +2482,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                         method_obj = getattr(old_obj, method_name, None)
 
                         out_str += " " + method_name
-                        if not OTrace.monkey_patch(func, method_obj, old_obj, repatch=edit_opt_force):
+                        if not OTrace.monkey_patch(func, method_obj, old_obj, repatch=cmd_opts.edit_force):
                             out_str += "-FAILED"
             else:
                 # Unpatch
@@ -2489,8 +2491,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 else:
                     unpatch_items = [(patch_name, old_obj)]
 
-                if len(unpatch_items) == 1 and redirect_out:
-                    filename = expanduser(redirect_out)
+                if len(unpatch_items) == 1 and cmd_opts.redirect_out:
+                    filename = expanduser(cmd_opts.redirect_out)
                     if not is_absolute_path(filename):
                         return (out_str, "Must specify absolute pathname for output file %s" % filename)
                     try:
@@ -2651,7 +2653,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     obj_value = getattr(obj_value, "__class__")
             try:
                 # Display object source
-                if view_opt_docstr:
+                if cmd_opts.view_docstr:
                     doc = inspect.getdoc(obj_value)
                     lines = doc.split("\n") if doc else []
                 else:
@@ -2660,11 +2662,11 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             except Exception, excp:
                 return (out_str, "Unable to display source for %s:\n %s" % (obj_path, excp))
 
-            if view_opt_inline:
+            if cmd_opts.view_inline:
                 return (content, err_str)
 
-            if redirect_out:
-                filename = expanduser(redirect_out)
+            if cmd_opts.redirect_out:
+                filename = expanduser(cmd_opts.redirect_out)
                 if not is_absolute_path(filename):
                     return (out_str, "Must specify absolute pathname for output file %s" % filename)
                 try:
