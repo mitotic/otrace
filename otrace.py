@@ -3220,7 +3220,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if Set_params["safe_mode"]:
                 out_str, err_str = "", "Code execution not permitted in safe mode; set safe_mode False"
             else:
-                out_str, err_str = self.push(rem_line, batch=batch)
+                out_str, err_str = self.push(rem_line, batch=False)
+                out_str = out_str or ""
             return (out_str, err_str)
 
         else:
