@@ -113,6 +113,18 @@ ls
 trace
 untrace all
 
+##############################################
+noecho msg Press ENTER key to proceed:
+noecho "*****Preserving trace contexts*****"
+
+cd ~~g
+set pickle_file trace_test.db
+trace Receive.respond
+submit(0)
+unpickle trace_test.db
+cd /osh/pickled
+ls
+
 noecho "Demo over."
 ##############################################
 

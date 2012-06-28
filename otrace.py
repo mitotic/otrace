@@ -252,7 +252,8 @@ BASE1_OFFSET = 2
 BASE2_OFFSET = 3
 TRACE_OFFSET = 6
 
-MAX_PICKLE_CHECK_DEPTH = 3   # Max depth to check for pickleability
+MAX_PICKLE_CHECK_DEPTH = 3      # Max depth to check for pickleability
+MAX_PICKLE_DATA_LENGTH = 10000  # Max length for individual pickled component data length
 
 ALL_DIR = "all"
 BROWSER_DIR = "browser"
@@ -301,6 +302,9 @@ ALT_SCREEN_OFFSEQ = "\x1b[?1049l"
 
 INAME = 0
 ISUBDIR = 1
+
+FILE_EXTENSIONS = {"css": "css", "htm": "html", "html": "html", "js": "javascript", "py": "python",
+                   "xml": "xml"}
 
 DOC_URL = "http://info.mindmeldr.com/code/otrace"
 DEFAULT_BANNER = """  ***otrace object shell (v%s)*** (type 'help' for info)""" % OTRACE_VERSION
@@ -427,7 +431,7 @@ def expanduser(filepath):
 
 def expandpath(filepath):
     """Return expanded filepath (absolute path or assumed relative to work directory)"""
-    return expanduser(filepath if is_absolute_path(filepath) or filepath.startswith(NEWCONTEXT_PREFIX) else WORKDIR_PREFIX+PATH_SEP+filepath)
+    return expanduser(filepath if is_absolute_path(filepath) or filepath.startswith(NEWCONTEXT_PREFIX) or filepath.startswith("~") else WORKDIR_PREFIX+PATH_SEP+filepath)
 
 def otrace_pformat(*args, **kwargs):
     if Set_params["pretty_print"]:
@@ -2175,13 +2179,13 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
                 new_dir = expanduser(new_dir)
                 if new_dir.startswith(TRACE_ID_PREFIX):
-                    trace_id = new_dir[1:]
+                    trace_id = new_dir[len(TRACE_ID_PREFIX):]
                     if not trace_id:
                         # Cd to default trace_id entry
                         new_dir = None
                     else:
                         # Cd to recent trace_id entry
-                        new_dir = PATH_SEP + PATH_SEP.join([RECENT_DIR] + list(ContextDict.split_trace_id(trace_id)))
+                        new_dir = PATH_SEP + PATH_SEP.join([BASE_DIR, RECENT_DIR] + ContextDict.split_trace_id(trace_id))
 
             if new_dir and PATH_SEP not in new_dir and new_dir.find("..") == -1 and self.get_base_subdir() in (GLOBALS_DIR, LOCALS_DIR):
                 # Replace . with /
@@ -2937,7 +2941,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                             default_path = self.make_path_str(self.get_default_dir())
                             path_attrs[".."] = ["file://"+urllib.quote(parent_path), "x-python/object", "cdls"]
                             path_attrs["."] = ["file://"+urllib.quote(cur_dir_path), "x-python/object", "cdls"]
-                            path_attrs["~"] = ["file://"+urllib.quote(default_path), "x-python/object", "cdls"]
+                            path_attrs["~~"] = ["file://"+urllib.quote(default_path), "x-python/object", "cdls"]
                         out_str = self.line_wrap(path_attrs.keys(), html_attrs=path_attrs, tail_count=3)
                     else:
                         out_str = self.line_wrap(path_attrs.keys())
@@ -3322,7 +3326,6 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                 raise AltHandler()
             filepath = self.make_path_str() + PATH_SEP + comp0
 
-        filetype = ""
         content = None
         if os.path.exists(filepath):
             try:
@@ -3331,6 +3334,11 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             except Exception, excp:
                 return (out_str, "Error in reading from '%s': %s" % (filepath, excp))
 
+        basename, extension = os.path.splitext(filepath)
+        if extension:
+            filetype = FILE_EXTENSIONS.get(extension[1:].lower(), "")
+        else:
+            filetype = ""
         if cmd == "view":
             if content is None:
                 return ("", "File %s not found" % filepath)                        
@@ -3441,7 +3449,7 @@ class ContextDict(dict):
         else:
             context_type = cls.context_types[ctype]
 
-        return (context_type, fullmethodname, context_id, trace_timestamp)
+        return [context_type, fullmethodname, context_id, trace_timestamp]
     
     def remove_context(self, trace_id, keep_holds=False):
         """ Remove context (called from add_context, with RLock; should not block otrace thread)
@@ -3552,14 +3560,14 @@ class TraceCallback(object):
     def logformat(self, fmt=None):
         return ""
 
-    def logmessage(self, log_level, msg, exc_info=None, logtype=""):
+    def logmessage(self, log_level, msg, exc_info=None, logtype="", plaintext=""):
         # If log_level is None, always display message
         if logtype or log_level is None or log_level >= self.log_level:
             if OShell.instance:
                 prefix, suffix = OShell.instance.switch_screen(logtype)
             else:
                 prefix, suffix = "", ""
-            sys.stderr.write(prefix+msg+"\n"+suffix)
+            sys.stderr.write(prefix+(plaintext or msg)+"\n"+suffix)
             
     def remote_log(self, host=None, remove=False):
         """ Set host (:port) for remote logging. If host is omitted, return current remote host.
@@ -3594,6 +3602,36 @@ class TraceCallback(object):
         self.logger.addHandler(logging.handlers.SocketHandler(addr, port))
         
 
+    def display_log(self, msg, trace_id="", prefix="", logtype="trace"):
+        """Display log message, with message prefixed by trace_id or prefix"""
+        log_level = self.log_level
+        plaintext = ""
+        if trace_id:
+            if Set_params["allow_xml"] and OTrace.html_wrapper:
+                subpath_names = ContextDict.split_trace_id(trace_id)
+                markup = ["file:///"+PATH_SEP.join([BASE_DIR, RECENT_DIR]+subpath_names), "x-python/object", "cdls"]
+                plaintext = trace_id + " " + msg
+                prefix = OShell.html_fmt % tuple(markup + [cgi.escape(trace_id)])
+                msg = cgi.escape(msg)
+            msg = prefix + " " + msg
+            log_level += 10
+            if trace_id.startswith("breaks") or trace_id.startswith("holds"):
+                log_level += 10
+
+        elif prefix:
+            msg = prefix + ": " + msg
+            if Set_params["allow_xml"] and OTrace.html_wrapper:
+                plaintext = msg
+                msg = cgi.escape(msg)
+
+        if Set_params["allow_xml"] and OTrace.html_wrapper:
+            pass
+        elif self.trace_len:
+            msg = msg[:self.trace_len]
+
+        self.logmessage(log_level, msg, logtype=logtype, plaintext=plaintext)
+
+
     def callback(self, trace_id, methodtype, modulename, classname, func_name, arg_val_pairs=[],
                  nameless_args_list=[], retro=False):
         """ Handle function call trace.
@@ -3612,40 +3650,21 @@ class TraceCallback(object):
         if retro:
             func_name += "*"
 
-        log_level = self.log_level
-        if trace_id:
-            msg = trace_id.replace("%", PATH_SEP) + " " + call_str
-            log_level += 10
-            if trace_id.startswith("breaks") or trace_id.startswith("holds"):
-                log_level += 10
-        else:
-            msg = "%s.%s(%s)" % (classname, func_name, call_str)
-
-        if self.trace_len:
-            msg = msg[:self.trace_len]
-                
-        self.logmessage(log_level, msg, logtype="trace")
+        self.display_log(call_str, trace_id=trace_id, prefix=("%s.%s" % (classname, func_name)) )
 
     def returnback(self, trace_id, methodtype, modulename, classname, func_name, result):
         """ Handle function return trace.
         Override this method, if need be.
         """
         return_str = "return %s" % (str(result),)
-        msg = "%s.%s: %s" % (classname, func_name, return_str)
+        self.display_log(return_str, trace_id=trace_id, prefix=("%s.%s" % (classname, func_name)) )
 
-        log_level = self.log_level
-        if trace_id:
-            msg = trace_id.replace("%", PATH_SEP) + " " + return_str
-            log_level += 10
-            if trace_id.startswith("breaks") or trace_id.startswith("holds"):
-                log_level += 10
-        else:
-            msg = "%s.%s: %s" % (classname, func_name, return_str)
-                
-        if self.trace_len:
-            msg = msg[:self.trace_len]
-                
-        self.logmessage(log_level, msg, logtype="trace")
+    def accessback(self, trace_id, op_type, key_str, entity):
+        """ Handle database access callback
+        Override this method, if need be.
+        """
+        msg = "access %s %s" % (op_type, key_str)
+        self.display_log(msg, trace_id=trace_id)
 
     def editback(self, content, filepath="", filetype="", editor="", modify=False):
         """ Create temp file with content, and display using editor.
@@ -3693,31 +3712,14 @@ class TraceCallback(object):
                 except Exception:
                     pass
 
-    def accessback(self, trace_id, op_type, key_str, entity):
-        """ Handle database access callback
-        Override this method, if need be.
-        """
-        msg = "access %s %s" % (op_type, key_str)
-
-        log_level = self.log_level
-        if trace_id:
-            msg = trace_id.replace("%", PATH_SEP) + " " + msg
-            log_level += 10
-            if trace_id.startswith("breaks") or trace_id.startswith("holds"):
-                log_level += 10
-                
-        if self.trace_len:
-            msg = msg[:self.trace_len]
-
-        self.logmessage(log_level, msg, logtype="trace")
 
 class DefaultCallback(TraceCallback):
     """ Simple default callback implementation
     """
-    def logmessage(self, log_level, msg, exc_info=None, logtype=""):
+    def logmessage(self, log_level, msg, exc_info=None, logtype="", plaintext=""):
         # If log_level is None, always display message
         if log_level is None or log_level >= self.log_level:
-            super(DefaultCallback, self).logmessage(None, msg, exc_info=exc_info, logtype=logtype)
+            super(DefaultCallback, self).logmessage(None, msg, exc_info=exc_info, logtype=logtype, plaintext=plaintext)
             
 class CallbackLogHandler(logging.Handler):
      def __init__(self):
@@ -4214,7 +4216,7 @@ class OTrace(object):
         """Creates new context (locals_dict) and returns (trace_id, trace_context)
         """
         trace_id, context_id = ContextDict.make_trace_id(context_type, fullmethodname, id_label, cls.get_timestamp())
-        new_context_path = [BASE_DIR, RECENT_DIR] + list(ContextDict.split_trace_id(trace_id))
+        new_context_path = [BASE_DIR, RECENT_DIR] + ContextDict.split_trace_id(trace_id)
         if self_arg is not None:
             if context_type == "holds" and cls.hold_wrapper:
                 # Set hold callback attribute
@@ -4251,7 +4253,7 @@ class OTrace(object):
                 tb_str = ""
                 j = post_str.find("\n")
                 if j > 0:
-                    prev_trace_id = post_str[1:j]
+                    prev_trace_id = post_str[len(TRACE_ID_PREFIX):j]
                     post_str = post_str[j+1:]
                     # Link to previous trace id in current context
                     new_context[TRACE_ID_PREFIX+prev_trace_id] = None
@@ -4288,8 +4290,8 @@ class OTrace(object):
     @classmethod
     def remove_break_point(cls, trace_id):
         with Trace_rlock:
-            path_names = [RECENT_DIR] + list(ContextDict.split_trace_id(trace_id))
-            if path_names == cls.recent_pathnames[BASE_OFFSET:]:
+            subpath_names = [RECENT_DIR] + ContextDict.split_trace_id(trace_id)
+            if subpath_names == cls.recent_pathnames[BASE_OFFSET:]:
                 del cls.recent_pathnames[:]
                 cls.recent_pathnames += [BASE_DIR, GLOBALS_DIR]
             cls.base_context[RECENT_DIR].remove_context(trace_id)
@@ -4757,7 +4759,7 @@ class OTrace(object):
 
             elif break_action == "hold" and trampoline_return and cls.hold_wrapper and info.self_arg is not None:
                 try:
-                    context_path = [BASE_DIR, RECENT_DIR] + list(ContextDict.split_trace_id(info.trace_id))
+                    context_path = [BASE_DIR, RECENT_DIR] + ContextDict.split_trace_id(info.trace_id)
                     async_handler = cls.hold_wrapper(HoldHandler(info.self_arg, PATH_SEP+PATH_SEP.join(context_path),
                                                                  resume_value=return_value) )
                     setattr(info.self_arg, cls.hold_attr, async_handler)
@@ -5235,7 +5237,7 @@ class PickleInterface(object):
             path_list = path_list + ["*"]
 
         if len(path_list) < 3:
-            for ctype, context_type in OTrace.context_types:
+            for ctype, context_type in ContextDict.context_types.items():
                 if path_list[0] == context_type:
                     return TRACE_ID_SEP.join([path_list[1], ctype+"-*", "*"])
             return None
@@ -5250,7 +5252,7 @@ class PickleInterface(object):
     def path_from_key(cls, key):
         """ Convert key to path component list
         """
-        return list(ContextDict.split_trace_id(key))
+        return ContextDict.split_trace_id(key)
         
     @classmethod
     def get_entity(cls, entity_key):
@@ -5343,12 +5345,16 @@ class PickleInterface(object):
                 return dict((key, cls.pickle_check(value, depth=depth+1)) for key, value in obj.iteritems())
 
         try:
-            # Check if object is pickleable
-            dummy = cPickle.dumps(obj)
-            return obj
+            # Check if object is pickleable (and not too large when pickled)
+            pickled = cPickle.dumps(obj)
+            if len(pickled) <= MAX_PICKLE_DATA_LENGTH:
+                 return obj
         except Exception:
-            # Object not pickleable; stringify it
-            return str(obj)
+            pass
+
+        # Object not pickleable; stringify it (truncating, if need be)
+        s = str(obj)
+        return s if len(s) <= MAX_PICKLE_DATA_LENGTH else s[:MAX_PICKLE_DATA_LENGTH]+"..."
 
     @classmethod
     def write_pickle_db(cls, trace_id, obj):
