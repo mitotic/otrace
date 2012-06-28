@@ -2267,45 +2267,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         elif not self.in_base_dir():
             # Non-otrace command; handle using shell
-            try:
-                env = os.environ.copy()
-                env.update(self.add_env)
-                osh_bin = Set_params["osh_bin"]
-                if osh_bin:
-                    # Prepend osh_bin to PATH (prepending with cwd, if needed)
-                    if not is_absolute_path(osh_bin):
-                        osh_bin = os.path.join(os.getcwd(), os_path(osh_bin))
-                    prev_path = env.get("PATH")
-                    if prev_path:
-                        env["PATH"] = osh_bin+":"+prev_path
-                    else:
-                        env["PATH"] = osh_bin
-
-                exec_context = {"queue": Queue.Queue()}
-                def execute_in_thread():
-                    try:
-                        exec_context["proc"] = subprocess.Popen(["/bin/bash", "-l", "-c", line], stdout=subprocess.PIPE,
-                                                                stderr=subprocess.PIPE,
-                                                                cwd=self.make_path_str(), env=env)
-                        exec_context["queue"].put(exec_context["proc"].communicate())
-                    except Exception, excp:
-                        exec_context["queue"].put(("", "ERROR in executing '%s': %s" % (line, excp)))
-
-                if Term_attr:
-                    save_attr = termios.tcgetattr(sys.stdin.fileno())
-                thrd = threading.Thread(target=execute_in_thread)
-                thrd.start()
-                try:
-                    return exec_context["queue"].get(True, EXEC_TIMEOUT)
-                except Queue.Empty:
-                    exec_context["proc"].kill()
-                    # Restore terminal attributes
-                    if Term_attr:
-                        termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, save_attr)
-                    return ("", "Timed out command execution '%s'" % (line,))
-                    
-            except Exception, excp:
-                return ("", "Error in command execution '%s': %s" % (line, excp))
+            return self.cmd_shell(line)
 
         elif cmd == "pwd":
             cwd = self.make_path_str()
@@ -2348,60 +2310,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             return (out_str, err_str)
 
         elif cmd in ("resume", "save", "del"):
-            trace_ids = []
-            if not comps:
-                if self.has_trc("id"):
-                    trace_ids = [ self.get_trc("id") ]
-            elif len(self.cur_fullpath) == BASE1_OFFSET and self.get_base_subdir() == ALL_DIR:
-                for comp in comps:
-                    trace_ids += self.path_matches(self.cur_fullpath, [comp])
-
-            if not trace_ids:
-                err_str = "No match for trace_id"
-
-            for trace_id in trace_ids:
-                if cmd == "resume":
-                    # Resume from breakpoint or hold
-                    with Trace_rlock:
-                        event = self.break_events.get(trace_id)
-                        if event:
-                            event.set()
-                            del self.break_events[trace_id]
-                            out_str = "Resuming " + trace_id
-                            OTrace.remove_break_point(trace_id)
-                        else:
-                            context = OTrace.base_context[ALL_DIR].get(trace_id)
-                            if context and context.get_trc("context") == "holds":
-                                self_arg = context.get("self")
-                                if hasattr(self_arg, OTrace.resume_attr):
-                                    resume_from_hold(self_arg)
-                                else:
-                                    err_str = "Unable to resume from hold for " + trace_id
-                                OTrace.remove_break_point(trace_id)
-                            else:
-                                err_str = "Unable to resume " + trace_id
-
-                    self.change_workdir(PATH_SEP+BASE_DIR+PATH_SEP+GLOBALS_DIR)
-                    self.update_prompt()
-
-                elif cmd == "save":
-                    # Save context(s)
-                    with Trace_rlock:
-                        context = OTrace.base_context[ALL_DIR].get(trace_id)
-                        if context is not None:
-                            OTrace.base_context[SAVED_DIR].add_context(context, trace_id)
-                        else:
-                            err_str = "Unable to save context '%s'" % trace_id
-
-                elif cmd == "del":
-                    # Delete context(s)
-                    with Trace_rlock:
-                        try:
-                            del OTrace.base_context[ALL_DIR][trace_id]
-                        except Exception:
-                            pass
-                        OTrace.base_context[SAVED_DIR].remove_context(trace_id)
-            return (out_str, err_str)
+            return self.cmd_del_resume_save(cmd, comps, line, rem_line)
 
         elif cmd in ("ls", "rm"):
             # List "directory" or 'remove' entries
@@ -2416,60 +2325,11 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         elif cmd in ("tag", "untag"):
             # Tag/untag object for tracing
-            if not self.cur_fullpath:
-                return
-            value = None
-            if not comps or comps[0] == ".":
-                if self.has_trc("frame"):
-                    if "self" in self.locals_dict:
-                        value = self.locals_dict["self"]
-                    else:
-                        return (out_str, "No self object to %s in trace context" % cmd)
-                else:
-                    value = self.get_cur_value()
-            else:
-                full_path_list = comps[0].split(".")
-                value = self.get_subdir(self.locals_dict, full_path_list, value=True)
-
-            try:
-                if cmd == "tag":
-                    if len(comps) > 1:
-                        tag = comps[1]
-                    else:
-                        tag = "id"
-
-                    OTrace.tag(value, tag)
-                else:
-                    OTrace.untag(value)
-            except Exception, excp:
-                return (out_str, "Error in %s: %s" % (cmd, excp))
-            return (out_str, err_str)
+            return self.cmd_tag_untag(cmd, comps, line, rem_line)
 
         elif cmd == "unpickle":
             # Read and unpickle trace contexts
-            if not comps:
-                return (out_str, "Please specify filename")
-            filename = expandpath(comps.pop(0))
-            filters = {}
-            while comps:
-                comp = comps.pop(0)
-                field, sep, value = comp.partition("=")
-                if sep:
-                    filters[str(field)] = value
-            try:
-                PickleInterface.open_pickle_db(filename)
-                keys = PickleInterface.read_keys_pickle_db(**filters)
-                for key in keys:
-                    dirs = ContextDict.split_trace_id(key)
-                    context = OTrace.base_context[PICKLED_DIR]
-                    for cdir in dirs:
-                        if cdir not in context:
-                            context[cdir] = {}
-                        context = context[cdir]
-                    context[ENTITY_CHAR] = None
-            except Exception, excp:
-                raise
-                return (out_str, "Error in unpickling from %s: %s" % (filename, excp))
+            return self.cmd_unpickle(cmd, comps, line, rem_line)
 
         elif cmd == "pr":
             # Evaluate expression and print it
@@ -2483,6 +2343,50 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             return (out_str, "Unrecognized command '%s'" % cmd)
 
         return out_str, err_str
+
+    def cmd_shell(self, line):
+        """Execute shell command, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        try:
+            env = os.environ.copy()
+            env.update(self.add_env)
+            osh_bin = Set_params["osh_bin"]
+            if osh_bin:
+                # Prepend osh_bin to PATH (prepending with cwd, if needed)
+                if not is_absolute_path(osh_bin):
+                    osh_bin = os.path.join(os.getcwd(), os_path(osh_bin))
+                prev_path = env.get("PATH")
+                if prev_path:
+                    env["PATH"] = osh_bin+":"+prev_path
+                else:
+                    env["PATH"] = osh_bin
+
+            exec_context = {"queue": Queue.Queue()}
+            def execute_in_thread():
+                try:
+                    exec_context["proc"] = subprocess.Popen(["/bin/bash", "-l", "-c", line],
+                                                            stdout=subprocess.PIPE,
+                                                            stderr=subprocess.PIPE,
+                                                            cwd=self.make_path_str(), env=env)
+                    exec_context["queue"].put(exec_context["proc"].communicate())
+                except Exception, excp:
+                    exec_context["queue"].put(("", "ERROR in executing '%s': %s" % (line, excp)))
+
+            if Term_attr:
+                save_attr = termios.tcgetattr(sys.stdin.fileno())
+            thrd = threading.Thread(target=execute_in_thread)
+            thrd.start()
+            try:
+                return exec_context["queue"].get(True, EXEC_TIMEOUT)
+            except Queue.Empty:
+                exec_context["proc"].kill()
+                # Restore terminal attributes
+                if Term_attr:
+                    termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, save_attr)
+                return ("", "Timed out command execution '%s'" % (line,))
+
+        except Exception, excp:
+            return ("", "Error in command execution '%s': %s" % (line, excp))
 
     def cmd_view(self, cmd, comps, line, rem_line, cmd_opts):
         """View, returning (out_str, err_str)"""
@@ -2919,6 +2823,64 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         return (out_str, err_str)
 
 
+    def cmd_del_resume_save(self, cmd, comps, line, rem_line):
+        """Delete/resume/save, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        trace_ids = []
+        if not comps:
+            if self.has_trc("id"):
+                trace_ids = [ self.get_trc("id") ]
+        elif len(self.cur_fullpath) == BASE1_OFFSET and self.get_base_subdir() == ALL_DIR:
+            for comp in comps:
+                trace_ids += self.path_matches(self.cur_fullpath, [comp])
+
+        if not trace_ids:
+            err_str = "No match for trace_id"
+
+        for trace_id in trace_ids:
+            if cmd == "resume":
+                # Resume from breakpoint or hold
+                with Trace_rlock:
+                    event = self.break_events.get(trace_id)
+                    if event:
+                        event.set()
+                        del self.break_events[trace_id]
+                        out_str = "Resuming " + trace_id
+                        OTrace.remove_break_point(trace_id)
+                    else:
+                        context = OTrace.base_context[ALL_DIR].get(trace_id)
+                        if context and context.get_trc("context") == "holds":
+                            self_arg = context.get("self")
+                            if hasattr(self_arg, OTrace.resume_attr):
+                                resume_from_hold(self_arg)
+                            else:
+                                err_str = "Unable to resume from hold for " + trace_id
+                            OTrace.remove_break_point(trace_id)
+                        else:
+                            err_str = "Unable to resume " + trace_id
+
+                self.change_workdir(PATH_SEP+BASE_DIR+PATH_SEP+GLOBALS_DIR)
+                self.update_prompt()
+
+            elif cmd == "save":
+                # Save context(s)
+                with Trace_rlock:
+                    context = OTrace.base_context[ALL_DIR].get(trace_id)
+                    if context is not None:
+                        OTrace.base_context[SAVED_DIR].add_context(context, trace_id)
+                    else:
+                        err_str = "Unable to save context '%s'" % trace_id
+
+            elif cmd == "del":
+                # Delete context(s)
+                with Trace_rlock:
+                    try:
+                        del OTrace.base_context[ALL_DIR][trace_id]
+                    except Exception:
+                        pass
+                    OTrace.base_context[SAVED_DIR].remove_context(trace_id)
+        return (out_str, err_str)
+
     def cmd_lsrm(self, cmd, comps, line, rem_line):
         """'List' directory or 'remove' entries, returning (out_str, err_str)"""
         out_str, err_str = "", ""
@@ -3295,6 +3257,66 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if err_str:
                 return (out_str, err_str)
 
+        return (out_str, err_str)
+
+    def cmd_tag_untag(self, cmd, comps, line, rem_line):
+        """Tag/untag object, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        if not self.cur_fullpath:
+            return (out_str, err_str)
+        value = None
+        if not comps or comps[0] == ".":
+            if self.has_trc("frame"):
+                if "self" in self.locals_dict:
+                    value = self.locals_dict["self"]
+                else:
+                    return (out_str, "No self object to %s in trace context" % cmd)
+            else:
+                value = self.get_cur_value()
+        else:
+            full_path_list = comps[0].split(".")
+            value = self.get_subdir(self.locals_dict, full_path_list, value=True)
+
+        try:
+            if cmd == "tag":
+                if len(comps) > 1:
+                    tag = comps[1]
+                else:
+                    tag = "id"
+
+                OTrace.tag(value, tag)
+            else:
+                OTrace.untag(value)
+        except Exception, excp:
+            return (out_str, "Error in %s: %s" % (cmd, excp))
+        return (out_str, err_str)
+
+    def cmd_unpickle(self, cmd, comps, line, rem_line):
+        """Unpickle file, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        if not comps:
+            return (out_str, "Please specify filename")
+        filename = expandpath(comps.pop(0))
+        filters = {}
+        while comps:
+            comp = comps.pop(0)
+            field, sep, value = comp.partition("=")
+            if sep:
+                filters[str(field)] = value
+        try:
+            PickleInterface.open_pickle_db(filename)
+            keys = PickleInterface.read_keys_pickle_db(**filters)
+            for key in keys:
+                dirs = ContextDict.split_trace_id(key)
+                context = OTrace.base_context[PICKLED_DIR]
+                for cdir in dirs:
+                    if cdir not in context:
+                        context[cdir] = {}
+                    context = context[cdir]
+                context[ENTITY_CHAR] = None
+        except Exception, excp:
+            err_str = "Error in unpickling from %s: %s" % (filename, excp)
+            raise # ABC
         return (out_str, err_str)
 
     def cmd_pr(self, cmd, comps, line, rem_line, cmd_opts):
