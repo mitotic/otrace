@@ -1993,6 +1993,15 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         """Parse command line and execute command, returning (out_str, err_str) like self.push
             here_doc contains optional input.
         """
+        cmd_opts = type('Bunch', (object,),
+                        dict(batch=batch,
+                             here_doc=here_doc,
+                             redirect_in=None,
+                             redirect_out=None,
+                             edit_force=False,
+                             view_inline=False,
+                             view_docstr=False) )
+        
         self.update_terminal_size()
 
         while not self.break_queue.empty():
@@ -2088,13 +2097,6 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
         err_str = ""
 
         # Handle shell, javascript, and selected oshell commands
-        cmd_opts = type('Bunch', (object,),
-                        dict(redirect_in=None,
-                             redirect_out=None,
-                             edit_force=False,
-                             view_inline=False,
-                             view_docstr=False) )
-        
         if cmd == "quit":
             err_str = "Shutting down..."
             self.shutdown()
@@ -2252,14 +2254,14 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
                     else:
                         return ("", "Cannot edit/view multiples files: %s" % comp0)
 
-                if cmd == "edit" and cmd_opts.redirect_in == "" and here_doc is None:
+                if cmd == "edit" and cmd_opts.redirect_in == "" and cmd_opts.here_doc is None:
                     return ("", "Expecting here_doc input for editing %s" % comp0)
 
                 comps = [comp0] + comps
 
             if cmd != "unpatch":
                 try:
-                    return self.edit_view(cmd, comps, inline=cmd_opts.view_inline, here_doc=here_doc)
+                    return self.edit_view(cmd, comps, inline=cmd_opts.view_inline, here_doc=cmd_opts.here_doc)
                 except AltHandler:
                     pass    # Handle edit/unpatch/view command for /osh/*
 
@@ -2328,205 +2330,10 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             return self.cmd_trace(cmd, comps, line, rem_line)
 
         elif cmd == "untrace":
-            trace_name = ""
-            if comps:
-                trace_name = comps[0]
-                parent_obj = None
-                if trace_name in ("all", "*") or trace_name[0] == TRACE_LABEL_PREFIX or trace_name.startswith(TRACE_LOG_PREFIX):
-                    trace_value = trace_name
-                else:
-                    path_list = trace_name.split(".")
-                    trace_value = self.get_subdir(self.locals_dict, path_list, value=True)
-                    if len(path_list) > 1:
-                        parent_obj = self.get_subdir(self.locals_dict, path_list[:-1], value=True)
-                    else:
-                        parent_obj = self.get_cur_value()
-
-                if trace_value is None:
-                    return (out_str, "Invalid class/method for untracing: " + str(trace_name))
-
-                with Trace_rlock:
-                    # Remove tracing
-                    if inspect.isclass(trace_value):
-                        OTrace.trace_entity(trace_value, unwrap=True)
-                    elif inspect.isclass(parent_obj):
-                        OTrace.trace_method(parent_obj, trace_value, unwrap=True)
-                    elif inspect.ismodule(parent_obj):
-                        OTrace.trace_modulefunction(parent_obj, trace_value, unwrap=True)
-                    elif not isinstance(trace_value, basestring):
-                        return (out_str, "Cannot untrace %s" % trace_value)
-
-                    fullname = OTrace.remove_trace(trace_name, parent=parent_obj)
-                    out_str = "untraced %s" % fullname
-
-            return (out_str, err_str)
+            return self.cmd_untrace(cmd, comps, line, rem_line)
 
         elif cmd in ("edit", "unpatch"):
-            if Set_params["safe_mode"]:
-                return (out_str, "Patching/unpatching not permitted in safe mode; set safe_mode False")
-            patch_name = None
-            parent_obj = None
-            if comps and comps[0].startswith(DIR_PREFIX[GLOBALS_DIR]):
-                # Absolute path
-                comp = comps.pop(0)
-                tem_name = comp[len(DIR_PREFIX[GLOBALS_DIR]):]
-                path_list = tem_name.replace(PATH_SEP, ".").split(".")
-                patch_name = ".".join(path_list)
-                old_obj = self.get_subdir(self.globals_dict, path_list, value=True)
-                if len(path_list) > 1:
-                    parent_obj = self.get_subdir(self.globals_dict, path_list[:-1], value=True)
-                else:
-                    parent_obj = self.get_main_module()
-            else:
-                if self.get_base_subdir() not in (GLOBALS_DIR, PATCHES_DIR):
-                    return (out_str, "Patching only works in subdirectory of globals/patches")
-                if not comps:
-                    old_obj = self.get_cur_value()
-                    if self.get_base_subdir() == PATCHES_DIR:
-                        patch_name = self.get_leaf_dir()
-                        parent_obj = None
-                    else:
-                        patch_name = ".".join(x[INAME] for x in self.cur_fullpath[BASE1_OFFSET:])
-                        parent_obj = self.get_parent_value()
-                else:
-                    objname = comps.pop(0)
-                    obj_path_comps = objname.replace(PATH_SEP, ".").split(".")
-                    patch_name = ".".join([x[INAME] for x in self.cur_fullpath[BASE1_OFFSET:]]+obj_path_comps)
-                    if self.get_base_subdir() == PATCHES_DIR:
-                        old_obj = self.get_subdir(self.locals_dict, [objname], value=True)
-                        parent_obj = None
-                    else:
-                        old_obj = self.get_subdir(self.locals_dict, obj_path_comps, value=True)
-                        if len(obj_path_comps) == 1:
-                            parent_obj = self.get_cur_value()
-                        else:
-                            parent_obj = self.get_subdir(self.locals_dict, obj_path_comps[:-1], value=True)
-
-            basename = patch_name.split(".")[-1]
-            if not old_obj and not parent_obj and not (cmd == "unpatch" and patch_name == "*"):
-                return (out_str, "Invalid patch class/method: " + str(patch_name))
-
-            if cmd == "edit":
-                if inspect.isclass(old_obj):
-                    return ("", "Class patching not yet implemented; patch methods individually")
-                if cmd_opts.redirect_in:
-                    # Read patch from file
-                    filename = expanduser(cmd_opts.redirect_in)
-                    if not is_absolute_path(filename):
-                        return (out_str, "Must specify absolute pathname for input file %s" % filename)
-                    try:
-                        with open(os_path(filename), "r") as patchf:
-                            mod_content = patchf.read()
-                    except Exception, excp:
-                        return (out_str, "Error in reading from '%s': %s" % (filename, excp))
-                elif here_doc is not None:
-                    mod_content = here_doc
-                else:
-                    # Create patch using editor
-                    try:
-                        lines, start_line = OTrace.getsourcelines(old_obj)
-                    except IOError:
-                        return (out_str, "Error: source not found; specify source filename")
-                    except Exception, excp:
-                        return (out_str, "Error in accessing source: %s" % excp)
-
-                    if not start_line and not cmd_opts.edit_force:
-                        return (out_str, "Error: specify '-f' option to force editing of patched file")
-
-                    content = "".join(de_indent(lines))
-                    mod_content, err_str = OTrace.callback_handler.editback(content, filepath=DIR_PREFIX[GLOBALS_DIR]+patch_name, filetype="python", editor=Set_params["editor"], modify=True)
-                    if mod_content is None and err_str is None:
-                        # Delayed modification
-                         return ("_NoPrompt_", None)
-                    if err_str:
-                        return (out_str, err_str)
-                    if mod_content == content:
-                        # No changes
-                        return (out_str, "No changes")
-
-                tem_lines = mod_content.split("\n")
-                mod_lines = [x+"\n" for x in tem_lines[:-1]]
-                if tem_lines[-1]:
-                    mod_lines.append(tem_lines[-1])
-
-                # Find module containing function or class
-                module_name = old_obj.__module__ if old_obj else parent_obj.__module__
-                module_obj = sys.modules[module_name]
-                    
-                patch_locals = {}
-                out_str, err_str = self.interpreter.evaluate(mod_content, locals_dict=patch_locals,
-                                                             globals_dict=module_obj.__dict__,
-                                                             print_out=False)
-                if err_str:
-                    return (out_str, err_str)
-
-                if not old_obj or ismethod_or_function(old_obj):
-                    # Patch single function/method
-                    if (len(patch_locals) != 1 or patch_locals.keys()[0] != basename):
-                        return (out_str, "Error: patch file must contain only 'def %s', but found %s" % (basename, patch_locals))
-
-                    func = patch_locals.values()[0]
-                    out_str += "Patched " + patch_name + ":"
-                    patched_obj = OTrace.monkey_patch(func, old_obj, parent_obj, repatch=cmd_opts.edit_force,
-                                                      source=mod_lines)
-                    if patched_obj:
-                        OTrace.base_context[PATCHES_DIR][patch_name] = patched_obj
-                    else:
-                        out_str += "-FAILED"
-                
-                else:
-                    # Patch class
-                    OTrace.base_context[PATCHES_DIR][patch_name] = old_obj
-                    out_str += "Patched " + patch_name + ":"
-                    for method_name, func in patch_locals.iteritems():
-                        method_obj = getattr(old_obj, method_name, None)
-
-                        out_str += " " + method_name
-                        if not OTrace.monkey_patch(func, method_obj, old_obj, repatch=cmd_opts.edit_force):
-                            out_str += "-FAILED"
-            else:
-                # Unpatch
-                if patch_name == "*" and self.get_base_subdir() == PATCHES_DIR:
-                    unpatch_items = OTrace.base_context[PATCHES_DIR].items()
-                else:
-                    unpatch_items = [(patch_name, old_obj)]
-
-                if len(unpatch_items) == 1 and cmd_opts.redirect_out:
-                    filename = expanduser(cmd_opts.redirect_out)
-                    if not is_absolute_path(filename):
-                        return (out_str, "Must specify absolute pathname for output file %s" % filename)
-                    try:
-                        lines, start_line = OTrace.getsourcelines(unpatch_items[0][1])
-                    except IOError:
-                        return (out_str, "Error: patch source not found for saving")
-                    except Exception, excp:
-                        return (out_str, "Error in saving patch: %s" % excp)
-
-                    try:
-                        with open(os_path(filename), "w") as f:
-                            f.write("".join(lines))
-                    except Exception, excp:
-                        return (out_str, "Error in saving patch source: "+str(excp))
-
-                out_str = "Unpatching"
-                for patch_name, unpatch_obj in unpatch_items:
-                    if ismethod_or_function(unpatch_obj):
-                        # Unpatch single function/method
-                        if OTrace.monkey_unpatch(unpatch_obj):
-                            out_str += " " + patch_name
-                        else:
-                            return (out_str, "Unpatching failed for %s" % patch_name)
-                    else:
-                        # Unpatch class
-                        out_str += " " + patch_name + ":"
-                        for name, method_obj in inspect.getmembers(unpatch_obj, ismethod_or_function):
-                            if OTrace.monkey_unpatch(method_obj):
-                                out_str += " " + method_obj.__name__
-                    try:
-                        del OTrace.base_context[PATCHES_DIR][patch_name]
-                    except Exception:
-                        pass
-            return (out_str, err_str)
+            return self.cmd_edit_unpatch(cmd, comps, line, rem_line, cmd_opts)
 
         elif cmd == "source":
             if not comps:
@@ -2605,79 +2412,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             return self.cmd_set(cmd, comps, line, rem_line)
 
         elif cmd == "view":
-            obj_path = self.make_path_str()
-            obj_value = None
-            if not comps or comps[0] == ".":
-                if not self.in_base_dir():
-                    return ("", "No object to display")
-                    
-                if self.has_trc("frame"):
-                    # Display source context for exceptions, trace asserts etc.
-                    self.locals_dict["_stdout"] = self._stdout
-                    out_str, err_str = self.push('print >>_stdout, "%%s:%%s %%s\\n" %% %s["frame"][:3], "".join(%s["frame"][3])' % (TRACE_INFO, TRACE_INFO))
-                    del self.locals_dict["_stdout"]
-                    return (out_str, err_str)
-
-                if self.has_trc("func"):
-                    obj_value = self.get_trc("func")
-                else:
-                    obj_value = self.get_cur_value()
-
-            else:
-                comp0 = comps.pop(0)
-                if is_absolute_path(comp0):
-                    # Absolute path
-                    if comp0 == PATH_SEP+BASE_DIR:
-                        return ("", "Cannot edit/view %s" % comp0)
-                    elif not comp0.startswith(PATH_SEP+BASE_DIR+PATH_SEP):
-                        raise Exception("Internal error; cannot view %s" % comp0)
-
-                    obj_path = comp0
-                    tem_path = comp0[len(PATH_SEP+BASE_DIR+PATH_SEP):].replace(PATH_SEP, ".").split(".")
-                    obj_value = self.get_subdir("base", tem_path, value=True)
-                else:
-                    # Relative path
-                    if not self.in_base_dir():
-                        raise Exception("Internal error; cannot view %s" % comp0)
-                    obj_path = obj_path + PATH_SEP + comp0
-                    tem_path = comp0.replace(PATH_SEP, ".").split(".")
-                    obj_value = self.get_subdir(self.locals_dict, tem_path, value=True)
-
-            if not obj_value:
-                return (out_str, "No object to display source for")
-
-            if not (inspect.ismodule(obj_value) or inspect.isclass(obj_value) or
-                    inspect.ismethod(obj_value) or inspect.isfunction(obj_value)):
-                # Display class for non-module/class/method/function objects
-                if hasattr(obj_value, "__class__"):
-                    obj_value = getattr(obj_value, "__class__")
-            try:
-                # Display object source
-                if cmd_opts.view_docstr:
-                    doc = inspect.getdoc(obj_value)
-                    lines = doc.split("\n") if doc else []
-                else:
-                    lines, start_line = OTrace.getsourcelines(obj_value)
-                content = "".join(de_indent(lines))
-            except Exception, excp:
-                return (out_str, "Unable to display source for %s:\n %s" % (obj_path, excp))
-
-            if cmd_opts.view_inline:
-                return (content, err_str)
-
-            if cmd_opts.redirect_out:
-                filename = expanduser(cmd_opts.redirect_out)
-                if not is_absolute_path(filename):
-                    return (out_str, "Must specify absolute pathname for output file %s" % filename)
-                try:
-                    with open(os_path(filename), "w") as f:
-                        f.write(content)
-                    return ("", "")
-                except Exception, excp:
-                    return (out_str, "Error in saving view output: "+str(excp))
-
-            OTrace.callback_handler.editback(content, filepath=obj_path, filetype="python", editor=Set_params["editor"], modify=False)
-            return (out_str, err_str)
+            return self.cmd_view(cmd, comps, line, rem_line, cmd_opts)
 
         elif cmd in ("tag", "untag"):
             # Tag/untag object for tracing
@@ -2738,58 +2473,298 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         elif cmd == "pr":
             # Evaluate expression and print it
-            if len(comps) == 1 and comps[0].startswith(PATH_SEP+BASE_DIR+PATH_SEP):
-                tem_path = comps[0][len(PATH_SEP+BASE_DIR+PATH_SEP):].replace(PATH_SEP, ".").split(".")
-                obj_value = self.get_subdir("base", tem_path, value=True)
-                try:
-                    out_str = str(obj_value)
-                except Exception, excp:
-                    err_str = str(excp)
-                return (out_str, err_str)
-
-            if "\n" in rem_line or "\r" in rem_line:
-                err_str = "Line breaks are not permitted in expressions"
-
-            elif Set_params["safe_mode"] and ("(" in rem_line or re.search(r"[^=]=[^=]", rem_line)):
-                err_str = "Open parenthesis and assignment operator are not permitted in expressions in safe mode; set safe_mode False"
-            elif rem_line.lstrip().startswith("import ") or ASSIGNMENT_RE.match(rem_line):
-                return out_str, "Use 'exec' or '!' to execute import or assignment statements"
-            else:
-                if Set_params["pretty_print"]:
-                    self.locals_dict["_otrace_pformat"] = otrace_pformat
-                    pr_command = "_otrace_pformat("+rem_line+", width=%d)" % self.tty_width
-                    out_str, err_str = self.push(pr_command, batch=True)
-                    del self.locals_dict["_otrace_pformat"]
-                elif batch:
-                    out_str, err_str = self.push(rem_line, batch=True)
-                else:
-                    # Use 'print' command (pformat does not remove quotes from strings)
-                    self.locals_dict["_otrace_stdout"] = self._stdout
-                    self.locals_dict["_otrace_value"] = self.get_cur_value()
-                    if sys.version_info[0] < 3:
-                        pr_command = "print >>_otrace_stdout, "+rem_line
-                    else:
-                        pr_command = "print("+rem_line+", file=_otrace_stdout)" 
-                    out_str, err_str = self.push(pr_command)
-                    del self.locals_dict["_otrace_value"]
-                    del self.locals_dict["_otrace_stdout"]
-                if err_str and re.search(r"[^=]=[^=]", rem_line):
-                    err_str += "\n Looks like a python assignment statement; try prefixing with 'exec' or '!'"
-            return (out_str, err_str)
+            return self.cmd_pr(cmd, comps, line, rem_line, cmd_opts)
 
         elif cmd == "exec":
             # Execute code
-            if Set_params["safe_mode"]:
-                out_str, err_str = "", "Code execution not permitted in safe mode; set safe_mode False"
-            else:
-                out_str, err_str = self.push(rem_line, batch=False)
-                out_str = out_str or ""
-            return (out_str, err_str)
+            return self.cmd_exec(cmd, comps, line, rem_line, cmd_opts)
 
         else:
             return (out_str, "Unrecognized command '%s'" % cmd)
 
         return out_str, err_str
+
+    def cmd_view(self, cmd, comps, line, rem_line, cmd_opts):
+        """View, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        obj_path = self.make_path_str()
+        obj_value = None
+        if not comps or comps[0] == ".":
+            if not self.in_base_dir():
+                return ("", "No object to display")
+
+            if self.has_trc("frame"):
+                # Display source context for exceptions, trace asserts etc.
+                self.locals_dict["_stdout"] = self._stdout
+                out_str, err_str = self.push('print >>_stdout, "%%s:%%s %%s\\n" %% %s["frame"][:3], "".join(%s["frame"][3])' % (TRACE_INFO, TRACE_INFO))
+                del self.locals_dict["_stdout"]
+                return (out_str, err_str)
+
+            if self.has_trc("func"):
+                obj_value = self.get_trc("func")
+            else:
+                obj_value = self.get_cur_value()
+
+        else:
+            comp0 = comps.pop(0)
+            if is_absolute_path(comp0):
+                # Absolute path
+                if comp0 == PATH_SEP+BASE_DIR:
+                    return ("", "Cannot edit/view %s" % comp0)
+                elif not comp0.startswith(PATH_SEP+BASE_DIR+PATH_SEP):
+                    raise Exception("Internal error; cannot view %s" % comp0)
+
+                obj_path = comp0
+                tem_path = comp0[len(PATH_SEP+BASE_DIR+PATH_SEP):].replace(PATH_SEP, ".").split(".")
+                obj_value = self.get_subdir("base", tem_path, value=True)
+            else:
+                # Relative path
+                if not self.in_base_dir():
+                    raise Exception("Internal error; cannot view %s" % comp0)
+                obj_path = obj_path + PATH_SEP + comp0
+                tem_path = comp0.replace(PATH_SEP, ".").split(".")
+                obj_value = self.get_subdir(self.locals_dict, tem_path, value=True)
+
+        if not obj_value:
+            return (out_str, "No object to display source for")
+
+        if not (inspect.ismodule(obj_value) or inspect.isclass(obj_value) or
+                inspect.ismethod(obj_value) or inspect.isfunction(obj_value)):
+            # Display class for non-module/class/method/function objects
+            if hasattr(obj_value, "__class__"):
+                obj_value = getattr(obj_value, "__class__")
+        try:
+            # Display object source
+            if cmd_opts.view_docstr:
+                doc = inspect.getdoc(obj_value)
+                lines = doc.split("\n") if doc else []
+            else:
+                lines, start_line = OTrace.getsourcelines(obj_value)
+            content = "".join(de_indent(lines))
+        except Exception, excp:
+            return (out_str, "Unable to display source for %s:\n %s" % (obj_path, excp))
+
+        if cmd_opts.view_inline:
+            return (content, err_str)
+
+        if cmd_opts.redirect_out:
+            filename = expanduser(cmd_opts.redirect_out)
+            if not is_absolute_path(filename):
+                return (out_str, "Must specify absolute pathname for output file %s" % filename)
+            try:
+                with open(os_path(filename), "w") as f:
+                    f.write(content)
+                return ("", "")
+            except Exception, excp:
+                return (out_str, "Error in saving view output: "+str(excp))
+
+        OTrace.callback_handler.editback(content, filepath=obj_path, filetype="python", editor=Set_params["editor"], modify=False)
+        return (out_str, err_str)
+
+    def cmd_edit_unpatch(self, cmd, comps, line, rem_line, cmd_opts):
+        """Edit/unpatch, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        if Set_params["safe_mode"]:
+            return (out_str, "Patching/unpatching not permitted in safe mode; set safe_mode False")
+        patch_name = None
+        parent_obj = None
+        if comps and comps[0].startswith(DIR_PREFIX[GLOBALS_DIR]):
+            # Absolute path
+            comp = comps.pop(0)
+            tem_name = comp[len(DIR_PREFIX[GLOBALS_DIR]):]
+            path_list = tem_name.replace(PATH_SEP, ".").split(".")
+            patch_name = ".".join(path_list)
+            old_obj = self.get_subdir(self.globals_dict, path_list, value=True)
+            if len(path_list) > 1:
+                parent_obj = self.get_subdir(self.globals_dict, path_list[:-1], value=True)
+            else:
+                parent_obj = self.get_main_module()
+        else:
+            if self.get_base_subdir() not in (GLOBALS_DIR, PATCHES_DIR):
+                return (out_str, "Patching only works in subdirectory of globals/patches")
+            if not comps:
+                old_obj = self.get_cur_value()
+                if self.get_base_subdir() == PATCHES_DIR:
+                    patch_name = self.get_leaf_dir()
+                    parent_obj = None
+                else:
+                    patch_name = ".".join(x[INAME] for x in self.cur_fullpath[BASE1_OFFSET:])
+                    parent_obj = self.get_parent_value()
+            else:
+                objname = comps.pop(0)
+                obj_path_comps = objname.replace(PATH_SEP, ".").split(".")
+                patch_name = ".".join([x[INAME] for x in self.cur_fullpath[BASE1_OFFSET:]]+obj_path_comps)
+                if self.get_base_subdir() == PATCHES_DIR:
+                    old_obj = self.get_subdir(self.locals_dict, [objname], value=True)
+                    parent_obj = None
+                else:
+                    old_obj = self.get_subdir(self.locals_dict, obj_path_comps, value=True)
+                    if len(obj_path_comps) == 1:
+                        parent_obj = self.get_cur_value()
+                    else:
+                        parent_obj = self.get_subdir(self.locals_dict, obj_path_comps[:-1], value=True)
+
+        basename = patch_name.split(".")[-1]
+        if not old_obj and not parent_obj and not (cmd == "unpatch" and patch_name == "*"):
+            return (out_str, "Invalid patch class/method: " + str(patch_name))
+
+        if cmd == "edit":
+            if inspect.isclass(old_obj):
+                return ("", "Class patching not yet implemented; patch methods individually")
+            if cmd_opts.redirect_in:
+                # Read patch from file
+                filename = expanduser(cmd_opts.redirect_in)
+                if not is_absolute_path(filename):
+                    return (out_str, "Must specify absolute pathname for input file %s" % filename)
+                try:
+                    with open(os_path(filename), "r") as patchf:
+                        mod_content = patchf.read()
+                except Exception, excp:
+                    return (out_str, "Error in reading from '%s': %s" % (filename, excp))
+            elif cmd_opts.here_doc is not None:
+                mod_content = cmd_opts.here_doc
+            else:
+                # Create patch using editor
+                try:
+                    lines, start_line = OTrace.getsourcelines(old_obj)
+                except IOError:
+                    return (out_str, "Error: source not found; specify source filename")
+                except Exception, excp:
+                    return (out_str, "Error in accessing source: %s" % excp)
+
+                if not start_line and not cmd_opts.edit_force:
+                    return (out_str, "Error: specify '-f' option to force editing of patched file")
+
+                content = "".join(de_indent(lines))
+                mod_content, err_str = OTrace.callback_handler.editback(content, filepath=DIR_PREFIX[GLOBALS_DIR]+patch_name, filetype="python", editor=Set_params["editor"], modify=True)
+                if mod_content is None and err_str is None:
+                    # Delayed modification
+                     return ("_NoPrompt_", None)
+                if err_str:
+                    return (out_str, err_str)
+                if mod_content == content:
+                    # No changes
+                    return (out_str, "No changes")
+
+            tem_lines = mod_content.split("\n")
+            mod_lines = [x+"\n" for x in tem_lines[:-1]]
+            if tem_lines[-1]:
+                mod_lines.append(tem_lines[-1])
+
+            # Find module containing function or class
+            module_name = old_obj.__module__ if old_obj else parent_obj.__module__
+            module_obj = sys.modules[module_name]
+
+            patch_locals = {}
+            out_str, err_str = self.interpreter.evaluate(mod_content, locals_dict=patch_locals,
+                                                         globals_dict=module_obj.__dict__,
+                                                         print_out=False)
+            if err_str:
+                return (out_str, err_str)
+
+            if not old_obj or ismethod_or_function(old_obj):
+                # Patch single function/method
+                if (len(patch_locals) != 1 or patch_locals.keys()[0] != basename):
+                    return (out_str, "Error: patch file must contain only 'def %s', but found %s" % (basename, patch_locals))
+
+                func = patch_locals.values()[0]
+                out_str += "Patched " + patch_name + ":"
+                patched_obj = OTrace.monkey_patch(func, old_obj, parent_obj, repatch=cmd_opts.edit_force,
+                                                  source=mod_lines)
+                if patched_obj:
+                    OTrace.base_context[PATCHES_DIR][patch_name] = patched_obj
+                else:
+                    out_str += "-FAILED"
+
+            else:
+                # Patch class
+                OTrace.base_context[PATCHES_DIR][patch_name] = old_obj
+                out_str += "Patched " + patch_name + ":"
+                for method_name, func in patch_locals.iteritems():
+                    method_obj = getattr(old_obj, method_name, None)
+
+                    out_str += " " + method_name
+                    if not OTrace.monkey_patch(func, method_obj, old_obj, repatch=cmd_opts.edit_force):
+                        out_str += "-FAILED"
+        else:
+            # Unpatch
+            if patch_name == "*" and self.get_base_subdir() == PATCHES_DIR:
+                unpatch_items = OTrace.base_context[PATCHES_DIR].items()
+            else:
+                unpatch_items = [(patch_name, old_obj)]
+
+            if len(unpatch_items) == 1 and cmd_opts.redirect_out:
+                filename = expanduser(cmd_opts.redirect_out)
+                if not is_absolute_path(filename):
+                    return (out_str, "Must specify absolute pathname for output file %s" % filename)
+                try:
+                    lines, start_line = OTrace.getsourcelines(unpatch_items[0][1])
+                except IOError:
+                    return (out_str, "Error: patch source not found for saving")
+                except Exception, excp:
+                    return (out_str, "Error in saving patch: %s" % excp)
+
+                try:
+                    with open(os_path(filename), "w") as f:
+                        f.write("".join(lines))
+                except Exception, excp:
+                    return (out_str, "Error in saving patch source: "+str(excp))
+
+            out_str = "Unpatching"
+            for patch_name, unpatch_obj in unpatch_items:
+                if ismethod_or_function(unpatch_obj):
+                    # Unpatch single function/method
+                    if OTrace.monkey_unpatch(unpatch_obj):
+                        out_str += " " + patch_name
+                    else:
+                        return (out_str, "Unpatching failed for %s" % patch_name)
+                else:
+                    # Unpatch class
+                    out_str += " " + patch_name + ":"
+                    for name, method_obj in inspect.getmembers(unpatch_obj, ismethod_or_function):
+                        if OTrace.monkey_unpatch(method_obj):
+                            out_str += " " + method_obj.__name__
+                try:
+                    del OTrace.base_context[PATCHES_DIR][patch_name]
+                except Exception:
+                    pass
+        return (out_str, err_str)
+
+    def cmd_untrace(self, cmd, comps, line, rem_line):
+        """Terminate tracing, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        trace_name = ""
+        if comps:
+            trace_name = comps[0]
+            parent_obj = None
+            if trace_name in ("all", "*") or trace_name[0] == TRACE_LABEL_PREFIX or trace_name.startswith(TRACE_LOG_PREFIX):
+                trace_value = trace_name
+            else:
+                path_list = trace_name.split(".")
+                trace_value = self.get_subdir(self.locals_dict, path_list, value=True)
+                if len(path_list) > 1:
+                    parent_obj = self.get_subdir(self.locals_dict, path_list[:-1], value=True)
+                else:
+                    parent_obj = self.get_cur_value()
+
+            if trace_value is None:
+                return (out_str, "Invalid class/method for untracing: " + str(trace_name))
+
+            with Trace_rlock:
+                # Remove tracing
+                if inspect.isclass(trace_value):
+                    OTrace.trace_entity(trace_value, unwrap=True)
+                elif inspect.isclass(parent_obj):
+                    OTrace.trace_method(parent_obj, trace_value, unwrap=True)
+                elif inspect.ismodule(parent_obj):
+                    OTrace.trace_modulefunction(parent_obj, trace_value, unwrap=True)
+                elif not isinstance(trace_value, basestring):
+                    return (out_str, "Cannot untrace %s" % trace_value)
+
+                fullname = OTrace.remove_trace(trace_name, parent=parent_obj)
+                out_str = "untraced %s" % fullname
+
+        return (out_str, err_str)
 
     def cmd_trace(self, cmd, comps, line, rem_line):
         """Initiate tracing, returning (out_str, err_str)"""
@@ -3322,6 +3297,57 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
 
         return (out_str, err_str)
 
+    def cmd_pr(self, cmd, comps, line, rem_line, cmd_opts):
+        """Print expression, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        if len(comps) == 1 and comps[0].startswith(PATH_SEP+BASE_DIR+PATH_SEP):
+            tem_path = comps[0][len(PATH_SEP+BASE_DIR+PATH_SEP):].replace(PATH_SEP, ".").split(".")
+            obj_value = self.get_subdir("base", tem_path, value=True)
+            try:
+                out_str = str(obj_value)
+            except Exception, excp:
+                err_str = str(excp)
+            return (out_str, err_str)
+
+        if "\n" in rem_line or "\r" in rem_line:
+            err_str = "Line breaks are not permitted in expressions"
+
+        elif Set_params["safe_mode"] and ("(" in rem_line or re.search(r"[^=]=[^=]", rem_line)):
+            err_str = "Open parenthesis and assignment operator are not permitted in expressions in safe mode; set safe_mode False"
+        elif rem_line.lstrip().startswith("import ") or ASSIGNMENT_RE.match(rem_line):
+            return out_str, "Use 'exec' or '!' to execute import or assignment statements"
+        else:
+            if Set_params["pretty_print"]:
+                self.locals_dict["_otrace_pformat"] = otrace_pformat
+                pr_command = "_otrace_pformat("+rem_line+", width=%d)" % self.tty_width
+                out_str, err_str = self.push(pr_command, batch=True)
+                del self.locals_dict["_otrace_pformat"]
+            elif cmd_opts.batch:
+                out_str, err_str = self.push(rem_line, batch=True)
+            else:
+                # Use 'print' command (pformat does not remove quotes from strings)
+                self.locals_dict["_otrace_stdout"] = self._stdout
+                self.locals_dict["_otrace_value"] = self.get_cur_value()
+                if sys.version_info[0] < 3:
+                    pr_command = "print >>_otrace_stdout, "+rem_line
+                else:
+                    pr_command = "print("+rem_line+", file=_otrace_stdout)" 
+                out_str, err_str = self.push(pr_command)
+                del self.locals_dict["_otrace_value"]
+                del self.locals_dict["_otrace_stdout"]
+            if err_str and re.search(r"[^=]=[^=]", rem_line):
+                err_str += "\n Looks like a python assignment statement; try prefixing with 'exec' or '!'"
+        return (out_str, err_str)
+
+    def cmd_exec(self, cmd, comps, line, rem_line, cmd_opts):
+        """Execute statement, returning (out_str, err_str)"""
+        out_str, err_str = "", ""
+        if Set_params["safe_mode"]:
+            out_str, err_str = "", "Code execution not permitted in safe mode; set safe_mode False"
+        else:
+            out_str, err_str = self.push(rem_line, batch=False)
+            out_str = out_str or ""
+        return (out_str, err_str)
 
     def edit_view(self, cmd, comps, inline=False, here_doc=None):
         """Handle edit/view of files, returning (out_str, err_str) or raising AltHandler"""
