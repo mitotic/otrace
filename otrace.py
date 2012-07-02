@@ -1182,7 +1182,7 @@ class TraceConsole(object):
 class OShell(TraceConsole):
     """Object-oriented shell
     """
-    html_fmt = '<span class="otrace-link" data-otraceuri="%s" data-otracemime="%s" data-otracecmd="%s">%s</span>'
+    html_fmt = '<span class="xmlt-link" data-xmlturi="%s" data-xmltmime="%s" data-xmltcmd="%s">%s</span>'
 
     commands = {
 "alias":
@@ -3792,18 +3792,31 @@ class DefaultCallback(TraceCallback):
             
 class CallbackLogHandler(logging.Handler):
      def __init__(self):
+         self.recursion_lock = set()
          logging.Handler.__init__(self)
 
      def emit(self, record):
          if OTrace.callback_handler:
-             msg = self.format(record)
              try:
+                 thread_name = threading.currentThread().getName()
+             except Exception:
+                 thread_name = ""
+
+             if thread_name in self.recursion_lock:
+                 # Recursive call to emit; ignore
+                 return
+             self.recursion_lock.add(thread_name)
+
+             try:
+                 msg = self.format(record)
                  OTrace.callback_handler.logmessage(None, msg)
              except Exception:
                  self.handleError(record)
-
+             finally:
+                 self.recursion_lock.discard(thread_name)
+             
      def flush(self):
-          pass
+         pass
 
 class HtmlWrapper(object):
     """ Wrapper for HTML output
