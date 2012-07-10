@@ -322,7 +322,7 @@ Help_params["log_level"]     = "Logging level (10=>DEBUG, 20=>INFO, 30=>WARNING 
 Help_params["log_remote"]    = "IP address or domain (:port) for remote logging (default port: 9020)"
 Help_params["log_truncate"]  = "No. of characters to display for log messages (default: 72)"
 Help_params["max_recent"]    = "Maximum number of entries to keep in /osh/recent"
-Help_params["osh_bin"]       = "Path to prepend to $PATH to override 'ls' etc. (can be set to 'osh_bin')"
+Help_params["osh_bin"]       = "Path to prepend to $PATH to use custom commands"
 Help_params["password"]      = "Encrypted access password (use otrace.encrypt_password to create it)"
 Help_params["pickle_file"]   = "Name of file to save pickled trace contexts"
 Help_params["pretty_print"]  = "Use pprint.pformat rather than print to display expressions"
@@ -1182,7 +1182,7 @@ class TraceConsole(object):
 class OShell(TraceConsole):
     """Object-oriented shell
     """
-    html_fmt = '<span class="xmlt-link" data-xmlturi="%s" data-xmltmime="%s" data-xmltcmd="%s">%s</span>'
+    html_fmt = '<span class="gterm-link" data-gtermuri="%s" data-gtermmime="%s" data-gtermcmd="%s">%s</span>'
 
     commands = {
 "alias":
@@ -1947,9 +1947,9 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             event.set()
         super(OShell, self).shutdown()
 
-    def line_wrap(self, str_list, html_attrs=None, tail_count=0):
+    def line_wrap(self, str_list, html_attrs=None, pre_count=0):
         """Format a list of strings so that they are laid out in tabular form.
-        If tail_count, the last tail_count entries always appear in a separate line
+        If pre_count, the first pre_count entries always appear in a separate line
         """
         if not str_list:
             return ""
@@ -1972,7 +1972,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             else:
                 fmt_value = text_fmt % value
 
-            if (j and not (j % ncols) and j < nstr-tail_count) or j == nstr-tail_count:
+            jdel = j - pre_count
+            if (pre_count and j == pre_count) or (jdel > 0 and not (jdel % ncols)):
                 formatted.append("\n")
             elif j:
                 formatted.append(" ")
@@ -2353,6 +2354,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             osh_bin = Set_params["osh_bin"]
             if osh_bin:
                 # Prepend osh_bin to PATH (prepending with cwd, if needed)
+                osh_bin = expanduser(osh_bin)
                 if not is_absolute_path(osh_bin):
                     osh_bin = os.path.join(os.getcwd(), os_path(osh_bin))
                 prev_path = env.get("PATH")
@@ -3007,6 +3009,15 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             fmt = "%-"+str(max_width)+"s"
 
             path_attrs = OrderedDict()
+            pre_count = 0
+            if not show_long and len(self.cur_fullpath) > 1 and Set_params["allow_xml"] and OTrace.html_wrapper:
+              parent_path = self.make_path_str(self.cur_fullpath[:-1])
+              default_path = self.make_path_str(self.get_default_dir())
+              path_attrs[".."] = ["file://"+urllib.quote(parent_path), "x-python/object", "cdls"]
+              path_attrs["."] = ["file://"+urllib.quote(cur_dir_path), "x-python/object", "cdls"]
+              path_attrs["~~"] = ["file://"+urllib.quote(default_path), "x-python/object", "cdls"]
+              pre_count = len(path_attrs)
+
             out_list = []
             for j, dir_path in enumerate(matches):
                 if is_absolute_path(dir_path):
@@ -3079,13 +3090,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             else:
                 # Display names only
                 if Set_params["allow_xml"] and OTrace.html_wrapper:
-                    if len(self.cur_fullpath) > 1:
-                        parent_path = self.make_path_str(self.cur_fullpath[:-1])
-                        default_path = self.make_path_str(self.get_default_dir())
-                        path_attrs[".."] = ["file://"+urllib.quote(parent_path), "x-python/object", "cdls"]
-                        path_attrs["."] = ["file://"+urllib.quote(cur_dir_path), "x-python/object", "cdls"]
-                        path_attrs["~~"] = ["file://"+urllib.quote(default_path), "x-python/object", "cdls"]
-                    out_str = self.line_wrap(path_attrs.keys(), html_attrs=path_attrs, tail_count=3)
+                    out_str = self.line_wrap(path_attrs.keys(), html_attrs=path_attrs, pre_count=pre_count)
                 else:
                     out_str = self.line_wrap(path_attrs.keys())
 
