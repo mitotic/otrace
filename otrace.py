@@ -3687,6 +3687,8 @@ class TraceCallback(object):
                 plaintext = trace_id + " " + msg
                 prefix = OShell.html_fmt % tuple(markup + [cgi.escape(trace_id)])
                 msg = cgi.escape(msg)
+            else:
+                prefix = trace_id.replace("%", PATH_SEP)
             msg = prefix + " " + msg
             log_level += 10
             if trace_id.startswith("breaks") or trace_id.startswith("holds"):
@@ -5523,7 +5525,7 @@ untag = OTrace.untag
 get_tag = OTrace.get_tag
 set_tag = OTrace.set_tag
     
-if __name__ == "__main__":
+def test():
     # Test OTrace
     class TestClass(object):
         def method(self, arg1, kwarg1=None):
@@ -5581,8 +5583,6 @@ if __name__ == "__main__":
     testobj.cmethod(True)
     testobj.smethod("ss", 33)
 
-    OTrace.disable_trace()
-    
     OTrace.add_trace(".method", argmatch={"arg1":33})
     OTrace.add_trace(".method2", argmatch={"return":44})
 
@@ -5600,4 +5600,69 @@ if __name__ == "__main__":
     print testobj.method2("55patch", kwarg1="KWRD")
     OTrace.monkey_unpatch(TestClass.method2)
     print testobj.method2("55unpatch", kwarg1="KWRD")
+
+
+def main(args=None):
+    import imp
+    if args is None:
+         args = sys.argv[1:]
+
+    if len(args) < 1 or (args[0] == "-f" and len(args) < 3):
+        print >> sys.stderr, "Usage: otrace [-f function_name (default: main(args=[]))] program_file [arg1 arg2 ...]"
+        sys.exit(1)
+
+    if args[0] == "-f":
+        funcname, filepath = args[1], args[2]
+        args = args[3:]
+    else:
+        funcname, filepath = "main", args[0]
+        args = args[1:]
+
+    if not os.path.isfile(filepath) or not os.access(filepath, os.R_OK):
+        print >> sys.stderr, "otrace: Unable to read file %s" % filepath
+        sys.exit(1)
+
+    abspath = os.path.abspath(filepath)
+    filedir, basename = os.path.split(abspath)
+    modname, extension = os.path.splitext(basename)
+
+    # Load program as module
+    modfile, modpath, moddesc = imp.find_module(modname, [filedir])
+    modobj = imp.load_module(modname, modfile, modpath, moddesc)
+
+    if not hasattr(modobj, funcname) or not callable(getattr(modobj, funcname)):
+        print >> sys.stderr, "otrace: Program %s does not have function named '%s'" % (filepath, funcname)
+        sys.exit(1)
+        
+    # Initialize OShell instance
+    oshell_globals = modobj.__dict__
+    Trace_shell = OShell(locals_dict=oshell_globals, globals_dict=oshell_globals,
+                         allow_unsafe=True, init_file=modname+".trc", new_thread=True)
+
+    try:
+        # Start oshell
+        Trace_shell.stuff_lines(["trace %s\n" % funcname])
+        Trace_shell.loop()
+        
+        # Delay to ensure tracing has started
+        time.sleep(1)
+
+        # Call function in module
+        func = getattr(modobj, funcname)
+        if args:
+            func(args)
+        else:
+            func()
+
+    except Exception, excp:
+        traceback.print_exc()
+        print >> sys.stderr, "\nPress Enter to trace; ^C to abort: ",
+        Trace_shell.execute("cd ~~")
+        while True:
+            time.sleep(1)
+
+    finally:
+        Trace_shell.shutdown()
     
+if __name__ == "__main__":
+     main(args=sys.argv[1:])
