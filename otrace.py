@@ -1911,7 +1911,7 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             if not matched and ("?" in first_dir or "*" in first_dir or "[" in first_dir):
                 try:
                     # Try regexp match
-                    pattern = first_dir.replace("+", "\\+").replace("?", ".?").replace("*", ".*")   # Convert shell wildcard pattern to python regexp
+                    pattern = first_dir.replace("+", "\\+").replace(".", "\\.").replace("?", ".?").replace("*", ".*")   # Convert shell wildcard pattern to python regexp
                     matchobj = re.match(pattern, key)
                     if matchobj and matchobj.group() == key:
                         matched = True
