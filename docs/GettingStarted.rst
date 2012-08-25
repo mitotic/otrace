@@ -10,8 +10,10 @@ included in the distribution.
 Installation
 ==============================
 
-Download the latest tagged zip archive of *otrace* from the Github
-`tags page <https://github.com/mitotic/otrace/tags>`_.
+Download the development version of *otrace* from
+`Github <https://github.com/mitotic/otrace/downloads>`_,
+or the released archive from the
+`Python Package Index <http://pypi.python.org/pypi/otrace>`_
 The unzipped archive should contain the following files (and some more):
 
    ``hello_trace.py ordereddict.py otrace.py README.rst setup.py ...``
@@ -36,8 +38,10 @@ which will be used to illustrate the capabilities of *otrace*.
 
 All the *oshell* commands used below are available in the script
 ``demo/hello_test.osh``. Once you are comfortable with the steps in
-this tutorial, you can re-run the entire tutorial using the command
-``source ~~w/demo/hello_test.osh``
+this tutorial, you can re-run the entire tutorial using the following
+command (in the *otrace* console)::
+
+  source ~~w/demo/hello_test.osh
 
 help, cd, ls, and view commands
 ====================================================
@@ -47,12 +51,13 @@ the prompt ">"). The ``help`` command displays all the available *oshell* comman
 
   otrace$ ./hello_trace.py
   Listening on port 8888
-    ***otrace object shell (v0.30)*** (type 'help' for info)
+    ***otrace object shell (v0.30.0+)*** (type 'help' for info)
   > help
   Commands:
-  alias   cd      cdls    del     dn      edit    exec    help    ls      popd   
-  pr      pushd   pwd     quit    read    repeat  resume  rm      save    set    
-  swapd   tag     trace   unpatch untag   untrace up      view   
+  alias    cd       cdls     del      dn       edit     exec     help    
+  lock     ls       popd     pr       pushd    pwd      quit     repeat  
+  resume   rm       run      save     set      source   swapd    tag     
+  trace    unpatch  unpickle untag    untrace  up       view
 
   If you omit the command, "pr" is assumed.
   Use TAB key for command completion.

@@ -11,7 +11,8 @@ except ImportError:
 
 setup(name="otrace",
       py_modules=py_modules,
-      version="0.30",
+      version="0.30.0+",
+      entry_points={"console_scripts":["otrace = otrace:main"]},
       description="otrace: An object-oriented debugger for nonlinear tracing",
       author="Ramalingam Saravanan",
       author_email="sarava@sarava.net",

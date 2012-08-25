@@ -10,8 +10,6 @@ import sys
 import traceback
 import urlparse
 
-import otrace
-
 if sys.version_info[0] < 3:
     def encode(s):
         return s
@@ -109,53 +107,65 @@ class Receive(object):
     def __deepcopy__(self, memo):
         return self.__class__(copy.deepcopy(self.value, memo))
 
-if __name__ == "__main__":
-    http_addr = "127.0.0.1"
-    http_port = 8888
+Http_addr = "127.0.0.1"
+Http_port = 8888
 
-    def submit(number, timeout=None):
-        """Simulate user form submission by executing a HTTP request"""
-        import urllib2
-        def http_request():
-            try:
-                response = urllib2.urlopen("http://%s:%s/?number=%s" % (http_addr, http_port, number))
-                resp_str = decode(response.read())
-                return "\n".join(resp_str.split("\n")[-4:-3]) if resp_str.startswith("<html>") else resp_str
-            except Exception, excp:
-                return excp.reason if isinstance(excp, urllib2.URLError) else str(excp)
-        if not timeout:
-            return http_request()
-
-        # HTTP request with timeout (run in a separate thread)
-        import threading
-        import Queue
-        exec_queue = Queue.Queue()
-        def execute_in_thread():
-            exec_queue.put(http_request())
-        thrd = threading.Thread(target=execute_in_thread)
-        thrd.start()
+def submit(number, timeout=None):
+    """Simulate user form submission by executing a HTTP request"""
+    import urllib2
+    def http_request():
         try:
-            return exec_queue.get(block=True, timeout=timeout)
-        except Queue.Empty:
-            return "Timed out after %s seconds" % timeout
+            response = urllib2.urlopen("http://%s:%s/?number=%s" % (Http_addr, Http_port, number))
+            resp_str = decode(response.read())
+            return "\n".join(resp_str.split("\n")[-4:-3]) if resp_str.startswith("<html>") else resp_str
+        except Exception, excp:
+            return excp.reason if isinstance(excp, urllib2.URLError) else str(excp)
+    if not timeout:
+        return http_request()
 
-    # HTTP server
-    http_server = MultiThreadedServer((http_addr, http_port), GetHandler)
-    print >> sys.stderr, "Listening on %s:%s" % (http_addr, http_port)
+    # HTTP request with timeout (run in a separate thread)
+    import threading
+    import Queue
+    exec_queue = Queue.Queue()
+    def execute_in_thread():
+        exec_queue.put(http_request())
+    thrd = threading.Thread(target=execute_in_thread)
+    thrd.start()
+    try:
+        return exec_queue.get(block=True, timeout=timeout)
+    except Queue.Empty:
+        return "Timed out after %s seconds" % timeout
 
+def test_fun():
     # Test function that raises an exception
-    def test_fun():
-        raise Exception("TEST EXCEPTION")
+    raise Exception("TEST EXCEPTION")
 
-    # Initialize OShell instance (to run on separate thread)
-    trace_shell = otrace.OShell(locals_dict=locals(), globals_dict=globals(), allow_unsafe=True,
-                                init_file="hello_trace.trc", new_thread=True)
+def run_server(args=[]):
+    http_server = MultiThreadedServer((Http_addr, Http_port), GetHandler)
+    print >> sys.stderr, "Listening on %s:%s (^C to stop)" % (Http_addr, Http_port)
+
+    http_server.serve_forever()
+
+def main(args=[]):
+    # Run HTTP server
+    logging.warning("hello_trace: args="+str(args))
+    try:
+        run_server(args)
+    except KeyboardInterrupt:
+        pass
+
+def trace_main(args=[]):
+    # Run HTTP server with otrace
+    import otrace
+
+    # Start otrace (in its own thread)
+    oshell = otrace.set_trace(globals(), new_thread=True)
 
     try:
-        # Start oshell
-        trace_shell.loop()
-
-        # Start server
-        http_server.serve_forever()
+        run_server(args)
     except KeyboardInterrupt:
-        trace_shell.shutdown()
+        # Clean shutdown of otrace (to avoid hung threads)
+        oshell.shutdown()
+
+if __name__ == "__main__":
+     trace_main(args=sys.argv[1:])

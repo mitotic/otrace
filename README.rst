@@ -3,17 +3,22 @@ otrace: An object-oriented python debugger for nonlinear tracing
 .. sectnum::
 .. contents::
 
+**NOTE**: This README file describes the development version of
+*otrace* on `GitHub <https://github.com/mitotic/otrace/downloads>`_.
+For a description of the `released version <http://pypi.python.org/pypi/otrace>`_,
+see the README file included with the distribution, or the
+`project website <http://info.mindmeldr.com/code/otrace>`_.
+
 Introduction
 =============================
 
 *otrace* is an object-oriented debugger for nonlinear tracing
 of asynchronous or multithreaded interactive python programs.
-It addresses
-some of the limitations of sequential debugging techniques which
-do not work well with server programs, where multiple requests are
-handled in parallel. For example, instrumenting web servers with
-print/logging statements can often result in voluminous log output
-with interleaved streams of messages.
+It addresses some of the limitations of sequential debugging
+techniques which do not work well with server programs, where
+multiple requests are handled in parallel. For example,
+instrumenting web servers with print/logging statements can often
+result in voluminous log output with interleaved streams of messages.
 
 *otrace* takes a different approach to debugging that relies less on
 sequential operations. Its features including taking "snapshots"
@@ -34,6 +39,25 @@ simple wildcarding are supported.
    - a teaching tool for exploring the innards of a program
    - a code patching tool for unit testing
 
+*otrace* is best suited for use with "long-running" programs like
+GUI applications or servers that interact with users. Typically,
+these programs have an *event loop* that runs until the program
+is shutdown. *otrace* runs in its own thread, and enables debugging
+of the running program.
+
+*otrace* takes control of the terminal, and would not work very
+well with programs that read user input directly from the terminal
+(or standard input). However, *otrace* has a browser-based graphical
+front-end, `GraphTerm <http://info.mindmeldr.com/code/graphterm>`_,
+that can be used with programs that do read from the terminal.
+
+*otrace* does not consume any resources until some tracing action is
+initiated. So it can be included in production code without any
+performance penalty. It also works well with detached server
+processes (*daemons*) via the GNU
+`screen <http://www.gnu.org/software/screen>`_ terminal emulator,
+or using the GraphTerm front-tend.
+
 
 Installation
 ==============================
@@ -41,10 +65,9 @@ Installation
 If you wish to install *otrace* without the sample programs, the ``easy_install otrace``
 command should be sufficient (provided the ``setuptools`` module is installed).
 
-The latest archive of *otrace* including sample programs may be
-downloaded from the Github
-`tags page <https://github.com/mitotic/otrace/tags>`_.
-The unzipped archive should contain the following files (and some more):
+The latest released version of *otrace*, including sample programs,
+may be downloaded from the `Python Package Index <http://pypi.python.org/pypi/otrace>`_
+The untarred/unzipped archive should contain the following files (and some more):
 
    ``hello_trace.py ordereddict.py otrace.py README.rst setup.py ...``
 
@@ -56,17 +79,18 @@ If you wish to install *otrace*, use:
 
    ``python setup.py install``
 
+The development version of *otrace* may be downloaded from
+`Github <https://github.com/mitotic/otrace/downloads>`_.
+
 
 Support
 =============================
-
-Info
 
  - This README file provides a brief introduction to *otrace*.
 
  - Report bugs and other issues using the Github `Issue Tracker <https://github.com/mitotic/otrace/issues>`_.
 
- -  A tutorial using a demo program is available in
+ - A tutorial using a demo program is available in
     `docs/GettingStarted.rst <http://info.mindmeldr.com/code/otrace/otrace-getting-started>`_.
 
  - `Python and the Holy Grail of Debugging <https://dl.dropbox.com/u/72208800/code/Python-debugging-APUG-jun13.pdf>`_:  slides from a talk given at the Austin Python Users Group.
@@ -75,50 +99,79 @@ Info
    `info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
 
 
-Usage
-=================================
+Using otrace from the command line
+=============================================================================
 
-*otrace* does not consume any resources until some tracing action is
-initiated. So it can be included in production code without any
-performance penalty.
-*otrace* works well with detached server processes (*daemons*)
-via the GNU `screen <http://www.gnu.org/software/screen>`_
-utility that emulates a terminal.
- 
-*otrace* is meant to be used in conjunction with an *event loop*, which
-is usually present in programs that interact with users such as web
-servers or GUI applications. *otrace* takes control of the terminal,
-and would not work very well with programs that read user input
-directly from the terminal (or standard input).
+If you have a program ``example.py`` whose execution you wish to
+trace, use the ``otrace`` command (or the program ``otrace.py``, if
+you have not installed *otrace*)::
 
-To use *otrace*, simply ``import otrace`` and instantiate the class ``otrace.OShell``,
-which provides a unix-like shell interface to interact with a running
-program via the terminal.
+  otrace example.py
 
-Here is a simple server example::
+You will see the *otrace* console. To execute a function ``main()`` in
+``example.py``, type the following command::
 
-     import BaseHTTPServer
-     from SimpleHTTPServer import SimpleHTTPRequestHandler
-     from otrace import OShell, traceassert
+  run main
 
-     http_server = BaseHTTPServer.HTTPServer(("", 8888), SimpleHTTPRequestHandler)
-     oshell = OShell(locals_dict=locals(), globals_dict=globals(),
-                     new_thread=True, allow_unsafe=True, init_file="server.trc")
-     try:
-         oshell.loop()
-         http_server.serve_forever()   # Main event loop
-     except KeyboardInterrupt:
-         oshell.shutdown()
+To execute the function ``test(arg=[])`` that accepts a single
+argument that is a list of strings, type::
+
+  run test arg1 arg2
+
+You can also invoke this function directly from the command line as
+follows::
+
+  otrace -f test example.py arg1 arg2
+
+In this case, the program will exit when the function ``test``
+returns.
+(At this time, only functions that accept no arguments, or a single
+optional argument that is a list of strings, can be invoked directly
+from the command line or using the ``run`` command.)
+
+
+Using otrace from within a program
+=============================================================================
+
+Although command line use of *otrace* may be sufficient for simple
+cases, you may wish to include *otrace* within your program for more
+complex situations. In a program with an event loop, *otrace* would be
+typically included as follows::
+
+  import otrace
+  # Start otrace (in its own thread)
+  oshell = otrace.set_trace(globals(), new_thread=True)
+  try:
+      # Run main program event loop ...
+  except KeyboardInterrupt:
+      # Clean shutdown of otrace (to avoid hung threads)
+      oshell.shutdown()
+
+Similar to *pdb*, *otrace* can also be invoked "as needed" within a program as follows::
+
+  import otrace
+  otrace.set_trace(globals())
+
+In this case, *otrace* will run in the calling thread, and the calling program
+will resume only after the ``quit`` command is typed in the *otrace*
+console.
+
+For interactively running functions in a program, you would include
+*otrace* as follows::
+
+  import otrace
+  otrace.set_trace(globals(), wait_to_run=true)
+
+In this case, *otrace* will run in a separate thread, but will wait
+for the ``run`` command to invoke a function in the main thread.
+(A new ``run`` command can be issued only after the function returns.)
+
 
 *Usage notes:*
 
  - If you run in *oshell* in its own daemon thread as shown above, use
-   the ^C sequence to abort the main thread, and call ``OShell.shutdown``
-   from main thread to cleanup terminal I/O etc.
-
- - If you run *oshell* in the main thread and the event loop in a
-   separate thread, ^C will abort and cleanup *oshell*. You may need to
-   shutdown the event loop cleanly after that.
+   the Control-C sequence to abort the main thread, and call ``shutdown``
+   from the main thread to cleanup.
 
  - Install the python ``readline`` module (``easy_install readline``) to enable *TAB* command completion.
 
@@ -195,6 +248,7 @@ parameters; | denotes alternatives)::
  pr python_expression      # Print value of expression (DEFAULT COMMAND)
  pwd                       # Print current working "directory"
  quit                      # Quit shell
+ run function [arg1 ...]   # Run function in main thread with optional string list argument
  repeat command            # Repeat command till new input is received
  resume [trace_id1..]      # Resume from breakpoint
  rm [-r] [pathname1..]     # Delete entities corresponding to pathnames (if supported)
