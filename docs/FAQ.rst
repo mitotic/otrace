@@ -62,11 +62,11 @@ deep copies of built-in object types and classes that implement the
 Is there a graphical front-end to *otrace*?
 ============================================
 
-There is a browser-based front-end that works, but is currently too "raw"
-for public release. If you browse the code for *otrace*, you will notice the
+Yes, see `GraphTerm <http://info.mindmeldr.com/code/graphterm>`_ 
+(Note: If you browse the code for *otrace*, you will notice the
 hooks used by the front-end, which could potentially be used by other
 graphical front-ends as well.
-(Note: *otrace* will always remain accessible directly via the command line.)
+*otrace* will always remain accessible directly via the command line.)
 
 
 What is *monkey patching*? Is it a good thing?
