@@ -98,6 +98,7 @@ class Receive(object):
         ##    print("Client address", request.client_address)
 
         # Trace assertion (initially commented out)
+        ##import otrace
         ##otrace.traceassert(self.value > 0.001, label="num_check")
 
         # Compute reciprocal of number
