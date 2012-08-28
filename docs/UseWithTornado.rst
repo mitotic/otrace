@@ -11,7 +11,7 @@ in the system (or in the ``tornademos`` directory).
 Setup
 =========================================================
 
-For use with Torando, *otrace* requires a couple of additional
+For use with Tornado, *otrace* requires a couple of additional
 options, ``hold_wrapper`` and ``eventloop_callback``::
 
     # Initialize OShell instance (to run on separate thread)
@@ -71,7 +71,7 @@ is triggered when a user enters the number *77* in the form::
   globals>
 
 Note that we need to activate tracing explicitly by setting parameter
-``trace_active`` to True to trace ``traceassert`` calls. (This step
+``trace_active`` to True to trace ``traceassert`` calls. (This step is
 not needed when the ``trace`` command is used for tracing, because
 tracing is automatically activated.)
 
@@ -79,6 +79,9 @@ tracing is automatically activated.)
 /osh/web
 =========================================================
 
+The ``/osh/web`` feature, used with Websockets and
+some Javascript "glue code", allows the *otrace* server console
+to execute arbitrary Javacript commands on the client-side browser.
 The demo program ``tornademos/chat_websock.py`` is a modified version
 of the chat demo program distributed with Tornado, using websockets.
 If you run the program, and have one or more users chatting, you can
@@ -96,7 +99,7 @@ execute javascript commands in any user's browser via the
   web> cd user1
   web..user1> $("body")
   [object Object]
-  web..user1> $("body").css("background","red") // Change background  to red
+  web..user1> $("body").css("background","red") // Change background to red
   [object Object]
 
 In ``chat_websock.py``, user input is handled by the input element
