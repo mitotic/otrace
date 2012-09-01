@@ -222,7 +222,7 @@ These are inserted by ``otrace`` for tracing::
       response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
   ZeroDivisionError: float division by zero
 
-When a trace condition occurs, like an exception in a traced function or method, a trace id
+When a trace condition occurs, like an exception in a traced function or method, a *trace id*
 ``GetHandler.respond:ex-ZeroDivisionError:05-08-45`` is generated and displayed,
 as shown above. Also, the default action of the ``trace`` command is
 to create a new virtual directory
@@ -257,15 +257,18 @@ edit and traceassert
 =========================================================
 
 The ``edit`` command is perhaps the most useful command in *otrace*. It
-allows you to modify (`monkey patch <http://en.wikipedia.org/wiki/Monkey_patch>`_) any function or method in the
-running program. In particular, it makes it easy to use the "oldest"
-debugging technique, viz., inserting ``print`` statements in the code,
-without having to modify the actual source code files.
+allows you to modify (`monkey patch <http://en.wikipedia.org/wiki/Monkey_patch>`_)
+any function or method in the running program. In particular, it makes
+it easy to use the "oldest" debugging technique, viz., inserting
+``print`` statements in the code,
+without having to modify the actual source code files. You can also
+insert calls to ``traceassert``, which is the equivalent of setting
+conditional breakpoints in the code.
 
 Now that we know the there is an exception occurring in the method
 ``respond``, we pretend that we don't know the exact cause, and will
-use the ``traceassert`` function to determine the cause. The ``traceassert``
-functions has the signature ``traceassert(condition, label="", action="")``.
+use ``traceassert`` to determine the cause. The ``traceassert``
+function has the signature ``traceassert(condition, label="", action="")``.
 As long as ``condition`` is true, ``traceassert`` simply returns. If
 ``condition`` is false, the call is logged and a *trace context*
 virtual directory is created. 
@@ -287,8 +290,8 @@ as well as the diagnostic ``print`` statement, via the ``edit`` command.)::
   Patched Receive.respond:
 
 Note that we need to activate tracing explicitly by setting parameter
-``trace_active`` to True to trace ``traceassert`` calls. (This step
-not needed when the ``trace`` command is used, because tracing is
+``trace_active`` to ``True`` to trace ``traceassert`` calls. (This step
+is not needed when the ``trace`` command is used, because tracing is
 automatically activated.)
 After the edit, the statement ``otrace.traceassert(number > 0.001, label="num_check")``
 has been inserted into ``Receive.respond``. In the browser, enter the number
@@ -318,9 +321,10 @@ which allows us to examine the local variables when the assertion failed::
   Connection: close
   User-Agent: Python-urllib/2.7
 
-The default action when the traceassert condition is false is to
+The default action when the ``traceassert`` condition is false is to
 create the trace context directory. The ``action`` argument to
-``traceassert`` can be used set a breakpoint when the assertion fails.
+``traceassert`` can be used set a breakpoint when the assertion fails
+(as explained later).
 For efficiency, the trace context for ``traceassert`` does not save the
 backtrace stack local variables or source code information by default.
 To enable backtracing of stack and source code, ``set assert_context``
@@ -352,8 +356,8 @@ Object tag tracing
 
 One of the allowed actions in the ``trace -a <action> -c <condition> ...``
 command is ``tag``. The tag action adds a special attribute to the
-``self`` object if the trace condition is met at the time a function
-returns. The tag attribute is just a string, usually the object's
+``self`` object if the trace condition is met *at the time a function returns*.
+The tag attribute is just a string, usually the object's
 ``id``, but can also be the current time or some other string.
 The presence of tagged arguments can be specified as a trace condition
 for subsequent tracing of a function, using the ``-c tagged[<argname>]``
@@ -412,8 +416,7 @@ using the ``unpickle`` command to read trace contexts into the
   globals> cd /osh/pickled
   pickled> ls
   exceptions
-  pickled> cd
-  exceptions/Receive.respond/ex-ZeroDivisionError/17-06-22.0/:
+  pickled> cd exceptions/Receive.respond/ex-ZeroDivisionError/17-06-22.0/:
   osh..:> ls
   __trc   __up    request self   
   osh..:> 
@@ -430,8 +433,8 @@ follows it, erasing the screen each time before displaying the
 output. The default repeat interval is 0.2 seconds, and that
 can be changed via the ``set repeat_interval`` command.
 Any user input, or a trace event will end the repeat cycle.
-Here's an example of using ``repeat`` to monitor the requests
-processed by the demo the web server::
+Here's an example of using ``repeat`` to monitor requests
+processed by the demo web server::
 
 > repeat ls -l Request_stats/*
 
@@ -441,11 +444,20 @@ Breakpoints
 
 Breakpoints can be set using the ``-a break`` option for the ``trace``
 command, or the ``action="break"`` argument to ``traceassert``.
-The ``resume`` command is used to resume execution from a breakpoint.
+In a multi-threaded program, there may be more than one breakpoint
+active at a time. To resume execution, issue the ``resume`` command
+when the current directory is within the *trace context* of the
+breakpoint to be resumed, or specify the *trace id* to be resumed as
+the argument.
+
+NOTE: The ``trace`` command cannot set breakpoints at specific lines.
+Use the ``edit`` command to insert ``traceassert`` calls to break at
+specific locations within a function or method.
+
 Other possible actions for ``trace`` and ``traceassert`` include
 ``pdb`` or ``ipdb``, which launch the respective debuggers at the
-breakpoint. The ``continue`` command of the debuggers should be used
-to return control to *otrace*.
+breakpoint. The ``continue`` command of these debuggers should be used
+to return control of the terminal to *otrace*.
 
 .. |date| date::
 
