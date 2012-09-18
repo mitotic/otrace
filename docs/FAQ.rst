@@ -4,6 +4,14 @@ otrace FAQ
 .. contents::
 
 
+What platforms does *otrace* support?
+============================================
+
+*otrace* is written purely in python, but it uses OS-specific calls for
+file, shell, and terminal-related operations. It has been tested
+only on Linux and Mac OS X, but the demo program also runs on Windows.
+
+
 Can all unix shell commands be used with *otrace*?
 =====================================================
 
@@ -41,13 +49,6 @@ the *otrace* terminal. (The ``safe_mode`` parameter can help prevent
 inadvertent modification of the running program.)
 
 
-Does it work with Python 3?
-============================================
-
-It appears to work when ported using the ``2to3`` tool, but no real testing
-has been done. 
-
-
 Does *otrace* create true "snapshots" of variables?
 ======================================================
 
@@ -57,6 +58,16 @@ this shallow copy could change their value as execution progresses.
 The parameter ``deep_copy`` can be set to force *otrace* to retain
 deep copies of built-in object types and classes that implement the
 ``__deepcopy__`` hook.
+
+
+Why isn't TAB completion working for me?
+===============================================
+
+The GNU ``readline`` module needs to be installed for TAB completion to work.
+On Mac OS X, the pre-installed ``readline`` module may need to be
+replaced using the ``easy_install readline`` command. On Windows,
+use ``easy_install pyreadline`` instead. (``easy_install`` is
+available via the ``setuptools`` package.)
 
 
 Is there a graphical front-end to *otrace*?
@@ -101,21 +112,6 @@ the debugging of distributed applications. (It remains to be seen how
 useful this feature will be in practice.)
 
 
-What license is *otrace* distributed under?
-============================================
-
-The `BSD 2-clause <http://www.opensource.org/licenses/bsd-license.php>`_
-open source license.
- 
-
-What platforms does *otrace* support?
-============================================
-
-*otrace* is written purely in python, but it uses OS-specific calls for
-file, shell, and terminal-related operations. It has been tested
-only on Linux and Mac OS X, but the demo program also works on Windows.
-
-
 What is ``/osh/web``?
 ============================================
 
@@ -132,12 +128,16 @@ demo program ``tornademos/chat_websock.py`` for Python and
 Javascript "glue code" that is needed to accomplish this.
 
 
-Why isn't TAB completion working for me?
-===============================================
+Does *otrace* work with Python 3?
+============================================
 
-The GNU ``readline`` module needs to be installed for TAB completion to work.
-On Mac OS X, the pre-installed ``readline`` module may need to be
-replaced using the ``easy_install readline`` command. On Windows,
-use ``easy_install pyreadline`` instead. (``easy_install`` is
-available via the ``setuptools`` package.)
+It appears to work when ported using the ``2to3`` tool, but no real testing
+has been done. 
 
+
+What license is *otrace* distributed under?
+============================================
+
+The `BSD 2-clause <http://www.opensource.org/licenses/bsd-license.php>`_
+open source license.
+ 
