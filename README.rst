@@ -93,7 +93,9 @@ Support
  - A tutorial using a demo program is available in
     `docs/GettingStarted.rst <http://info.mindmeldr.com/code/otrace/otrace-getting-started>`_.
 
- - `Python and the Holy Grail of Debugging <https://dl.dropbox.com/u/72208800/code/Python-debugging-APUG-jun13.pdf>`_:  slides from a talk given at the Austin Python Users Group.
+ - `Python and the Holy Grail of Debugging: An Introduction to OTrace (PDF: 1.3MB)
+   <https://dl.dropbox.com/u/72208800/code/PyTexas12-OTrace-talk.pdf>`_:
+   slides from a talk given at PyTexas 2012.
 
  - Additional documentation and updates will be made available on the *project home page*,
    `info.mindmeldr.com/code/otrace <http://info.mindmeldr.com/code/otrace>`_.
