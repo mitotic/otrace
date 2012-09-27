@@ -360,7 +360,7 @@ class TraceInterface(object):
         # Must be thread-safe
         websocket = WSGIApp.websockets.get(path_comps[0])
         if not websocket:
-            cls.trace_output([], "", "No such socket: %s" % path_comps[0])
+            cls.trace_output(False, [], "", "No such socket: %s" % path_comps[0])
             return
 
         # Schedules callback in event loop
@@ -372,17 +372,17 @@ class TraceInterface(object):
         """Receive stdout/stderr output from browser via websocket and forward to oshell
         message = {'stdout':..., 'stderr': ...}
         """
-        cls.trace_output([username], message["stdout"], message.get("stderr"))
+        cls.trace_output(False, [username], message["stdout"], message.get("stderr"))
 
     @classmethod
-    def trace_output(cls, path_comps, stdout, stderr=None):
+    def trace_output(cls, repeat, path_comps, stdout, stderr=None):
         """ Send stdout/stderr output to oshell (invoked in the eventloop)
         path_comps: path component array (first element identifies websocket)
         """
         # Writing output to otrace stdout/stderr should be thread-safe
         if stderr:
-            cls.trace_hook("stderr", path_comps, stderr)
-        cls.trace_hook("stdout", path_comps, stdout)
+            cls.trace_hook("stderr", repeat, path_comps, stderr)
+        cls.trace_hook("stdout", repeat, path_comps, stdout)
         
 
 def main():
