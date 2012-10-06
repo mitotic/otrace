@@ -1,0 +1,251 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1   otrace FAQ &mdash; otrace 0.10.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.10.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="otrace 0.10.0 documentation" href="index.html" />
+    <link rel="next" title="1   Getting started with otrace and oshell" href="GettingStarted.html" />
+    <link rel="prev" title="1   otrace: An object-oriented python debugger for nonlinear tracing" href="README.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="index.html">otrace 0.10.0 documentation</a></div>
+        <div class="rel">
+          <a href="README.html" title="1   otrace: An object-oriented python debugger for nonlinear tracing"
+             accesskey="P">previous</a> |
+          <a href="GettingStarted.html" title="1   Getting started with otrace and oshell"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="otrace-faq">
+<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;otrace FAQ</a><a class="headerlink" href="#otrace-faq" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#otrace-faq" id="id1">1&nbsp;&nbsp;&nbsp;otrace FAQ</a><ul class="auto-toc">
+<li><a class="reference internal" href="#what-platforms-does-otrace-support" id="id2">1.1&nbsp;&nbsp;&nbsp;What platforms does <em>otrace</em> support?</a></li>
+<li><a class="reference internal" href="#can-all-unix-shell-commands-be-used-with-otrace" id="id3">1.2&nbsp;&nbsp;&nbsp;Can all unix shell commands be used with <em>otrace</em>?</a></li>
+<li><a class="reference internal" href="#can-i-use-pdb-with-otrace" id="id4">1.3&nbsp;&nbsp;&nbsp;Can I use <em>pdb</em> with <em>otrace</em>?</a></li>
+<li><a class="reference internal" href="#can-otrace-be-used-in-production-code-is-it-secure" id="id5">1.4&nbsp;&nbsp;&nbsp;Can <em>otrace</em> be used in production code? Is it secure?</a></li>
+<li><a class="reference internal" href="#does-otrace-create-true-snapshots-of-variables" id="id6">1.5&nbsp;&nbsp;&nbsp;Does <em>otrace</em> create true &#8220;snapshots&#8221; of variables?</a></li>
+<li><a class="reference internal" href="#why-isn-t-tab-completion-working-for-me" id="id7">1.6&nbsp;&nbsp;&nbsp;Why isn&#8217;t TAB completion working for me?</a></li>
+<li><a class="reference internal" href="#is-there-a-graphical-front-end-to-otrace" id="id8">1.7&nbsp;&nbsp;&nbsp;Is there a graphical front-end to <em>otrace</em>?</a></li>
+<li><a class="reference internal" href="#what-is-monkey-patching-is-it-a-good-thing" id="id9">1.8&nbsp;&nbsp;&nbsp;What is <em>monkey patching</em>? Is it a good thing?</a></li>
+<li><a class="reference internal" href="#what-is-object-tagging" id="id10">1.9&nbsp;&nbsp;&nbsp;What is <em>object tagging</em>?</a></li>
+<li><a class="reference internal" href="#what-is-osh-web" id="id11">1.10&nbsp;&nbsp;&nbsp;What is <tt class="docutils literal"><span class="pre">/osh/web</span></tt>?</a></li>
+<li><a class="reference internal" href="#does-otrace-work-with-python-3" id="id12">1.11&nbsp;&nbsp;&nbsp;Does <em>otrace</em> work with Python 3?</a></li>
+<li><a class="reference internal" href="#what-license-is-otrace-distributed-under" id="id13">1.12&nbsp;&nbsp;&nbsp;What license is <em>otrace</em> distributed under?</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="what-platforms-does-otrace-support">
+<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;What platforms does <em>otrace</em> support?</a><a class="headerlink" href="#what-platforms-does-otrace-support" title="Permalink to this headline">¶</a></h2>
+<p><em>otrace</em> is written purely in python, but it uses OS-specific calls for
+file, shell, and terminal-related operations. It has been tested
+only on Linux and Mac OS X, but the demo program also runs on Windows.</p>
+</div>
+<div class="section" id="can-all-unix-shell-commands-be-used-with-otrace">
+<h2><a class="toc-backref" href="#id3">1.2&nbsp;&nbsp;&nbsp;Can all unix shell commands be used with <em>otrace</em>?</a><a class="headerlink" href="#can-all-unix-shell-commands-be-used-with-otrace" title="Permalink to this headline">¶</a></h2>
+<p>No. Many unix shell commands can be used when the current directory
+is not <tt class="docutils literal"><span class="pre">/osh/*</span></tt>. However, each unix shell command  is executed in
+a separate shell process. Full-screen commands like <tt class="docutils literal"><span class="pre">vi</span></tt> will not work,
+but you can use the <em>oshell</em> <tt class="docutils literal"><span class="pre">edit</span></tt> and <tt class="docutils literal"><span class="pre">view</span></tt> commands instead.
+Unix shell aliases may also not work, but you can use <em>oshell</em> aliases.</p>
+</div>
+<div class="section" id="can-i-use-pdb-with-otrace">
+<h2><a class="toc-backref" href="#id4">1.3&nbsp;&nbsp;&nbsp;Can I use <em>pdb</em> with <em>otrace</em>?</a><a class="headerlink" href="#can-i-use-pdb-with-otrace" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">trace</span> <span class="pre">-a</span> <span class="pre">&lt;action&gt;</span> <span class="pre">-c</span> <span class="pre">&lt;condition&gt;</span> <span class="pre">&lt;function&gt;</span></tt> command allows
+<tt class="docutils literal"><span class="pre">pdb</span></tt>  (or <tt class="docutils literal"><span class="pre">ipdb</span></tt>) as one of the action options. This options
+switches control to <tt class="docutils literal"><span class="pre">pdb</span></tt> when the trace condition is satisfied.
+(To return control to <em>otrace</em>, use the <tt class="docutils literal"><span class="pre">continue</span></tt> command of <tt class="docutils literal"><span class="pre">pdb</span></tt>.)</p>
+</div>
+<div class="section" id="can-otrace-be-used-in-production-code-is-it-secure">
+<h2><a class="toc-backref" href="#id5">1.4&nbsp;&nbsp;&nbsp;Can <em>otrace</em> be used in production code? Is it secure?</a><a class="headerlink" href="#can-otrace-be-used-in-production-code-is-it-secure" title="Permalink to this headline">¶</a></h2>
+<p>Until tracing is initiated, <em>otrace</em> simply acts like a loaded, but unused,
+module. There is no performance penalty. The GNU
+<a class="reference external" href="http://www.gnu.org/software/screen">screen</a> utility can be used to
+provide a detachable terminal for using <em>otrace</em> with server processes. This
+terminal can only be accessed by the user who owns the server process. Anyone
+who is able to login with privileges to access the <em>otrace</em> terminal can directly
+execute unix shell commands in any case. However, the features that
+make <em>otrace</em> useful also make it easier for someone who has acquired
+unauthorized login privileges to examine variables in a running program,
+or even modify code, without having to edit files and restart the program.
+This can be prevented by using the <tt class="docutils literal"><span class="pre">lock</span></tt> command to password-protect
+the <em>otrace</em> terminal. (The <tt class="docutils literal"><span class="pre">safe_mode</span></tt> parameter can help prevent
+inadvertent modification of the running program.)</p>
+</div>
+<div class="section" id="does-otrace-create-true-snapshots-of-variables">
+<h2><a class="toc-backref" href="#id6">1.5&nbsp;&nbsp;&nbsp;Does <em>otrace</em> create true &#8220;snapshots&#8221; of variables?</a><a class="headerlink" href="#does-otrace-create-true-snapshots-of-variables" title="Permalink to this headline">¶</a></h2>
+<p>No. For efficiency, by default, <em>otrace</em> retains only a &#8220;shallow copy&#8221; of the
+dictionary  containing arguments and/or local variables. Entities in
+this shallow copy could change their value as execution progresses.
+The parameter <tt class="docutils literal"><span class="pre">deep_copy</span></tt> can be set to force <em>otrace</em> to retain
+deep copies of built-in object types and classes that implement the
+<tt class="docutils literal"><span class="pre">__deepcopy__</span></tt> hook.</p>
+</div>
+<div class="section" id="why-isn-t-tab-completion-working-for-me">
+<h2><a class="toc-backref" href="#id7">1.6&nbsp;&nbsp;&nbsp;Why isn&#8217;t TAB completion working for me?</a><a class="headerlink" href="#why-isn-t-tab-completion-working-for-me" title="Permalink to this headline">¶</a></h2>
+<p>The GNU <tt class="docutils literal"><span class="pre">readline</span></tt> module needs to be installed for TAB completion to work.
+On Mac OS X, the pre-installed <tt class="docutils literal"><span class="pre">readline</span></tt> module may need to be
+replaced using the <tt class="docutils literal"><span class="pre">easy_install</span> <span class="pre">readline</span></tt> command. On Windows,
+use <tt class="docutils literal"><span class="pre">easy_install</span> <span class="pre">pyreadline</span></tt> instead. (<tt class="docutils literal"><span class="pre">easy_install</span></tt> is
+available via the <tt class="docutils literal"><span class="pre">setuptools</span></tt> package.)</p>
+</div>
+<div class="section" id="is-there-a-graphical-front-end-to-otrace">
+<h2><a class="toc-backref" href="#id8">1.7&nbsp;&nbsp;&nbsp;Is there a graphical front-end to <em>otrace</em>?</a><a class="headerlink" href="#is-there-a-graphical-front-end-to-otrace" title="Permalink to this headline">¶</a></h2>
+<p>Yes, see <a class="reference external" href="http://code.mindmeldr.com/graphterm">GraphTerm</a>
+(Note: If you browse the code for <em>otrace</em>, you will notice the
+hooks used by the front-end, which could potentially be used by other
+graphical front-ends as well.
+<em>otrace</em> will always remain accessible directly via the command line.)</p>
+</div>
+<div class="section" id="what-is-monkey-patching-is-it-a-good-thing">
+<h2><a class="toc-backref" href="#id9">1.8&nbsp;&nbsp;&nbsp;What is <em>monkey patching</em>? Is it a good thing?</a><a class="headerlink" href="#what-is-monkey-patching-is-it-a-good-thing" title="Permalink to this headline">¶</a></h2>
+<p>&#8220;<a class="reference external" href="http://en.wikipedia.org/wiki/Monkey_patch">Monkey patching</a>&#8221;
+is a term used to refer to modification of code while a program is running.
+It is generally considered a bad practice to use in production code,
+although it is (or was) apparently an accepted practice in some
+programming environments. It is not very commonly used in Python.
+<em>otrace</em> makes it extremely easy to &#8220;monkey patch&#8221; your program,
+but this feature is not meant to be used in production code. However,
+it can be really useful when debugging a stateful program, because you
+can keep modifying code as you learn more about the bug you are
+tracking, while retaining the program state that triggers the bug. (Adding
+<tt class="docutils literal"><span class="pre">print</span></tt> statements to live code as you track a bug may perhaps be the
+most useful feature of <em>otrace</em>.)</p>
+</div>
+<div class="section" id="what-is-object-tagging">
+<h2><a class="toc-backref" href="#id10">1.9&nbsp;&nbsp;&nbsp;What is <em>object tagging</em>?</a><a class="headerlink" href="#what-is-object-tagging" title="Permalink to this headline">¶</a></h2>
+<p>The idea behind <em>object tagging</em> is that you can put a &#8220;marker&#8221; on an
+object, by adding a special attribute, <tt class="docutils literal"><span class="pre">_otrace_tag</span></tt>, indicating that
+it should be traced. Any function or method invocation where a tagged
+object is present in the argument list can be automatically tracked by
+<em>otrace</em>. Thus, we can follow a &#8220;rogue object&#8221; as it makes its way
+through the application. If a remote procedure call (RPC) implementation
+preserves the special tagging attribute, then tagged objects could
+also be tracked across different hosts running <em>otrace</em>, facilitating
+the debugging of distributed applications. (It remains to be seen how
+useful this feature will be in practice.)</p>
+</div>
+<div class="section" id="what-is-osh-web">
+<h2><a class="toc-backref" href="#id11">1.10&nbsp;&nbsp;&nbsp;What is <tt class="docutils literal"><span class="pre">/osh/web</span></tt>?</a><a class="headerlink" href="#what-is-osh-web" title="Permalink to this headline">¶</a></h2>
+<p>For web servers using bi-directional
+<a class="reference external" href="http://en.wikipedia.org/wiki/WebSocket">websockets</a>
+to communicate with the browser, hooks are provided in <em>otrace</em> to
+allow the mapping of each currently connected browser to the virtual
+directory <tt class="docutils literal"><span class="pre">/osh/web/username</span></tt>. Once in that directory, you can type any
+Javascript expression which will be sent to the browser to be evaluated
+and the result will be displayed back. So the <em>otrace</em> console temporarily
+acts like the Javascript console on the user&#8217;s browser (e.g., like Firebug).
+See the <a class="reference external" href="http://www.tornadoweb.org">Tornado</a>-based
+demo program <tt class="docutils literal"><span class="pre">tornademos/chat_websock.py</span></tt> for Python and
+Javascript &#8220;glue code&#8221; that is needed to accomplish this.</p>
+</div>
+<div class="section" id="does-otrace-work-with-python-3">
+<h2><a class="toc-backref" href="#id12">1.11&nbsp;&nbsp;&nbsp;Does <em>otrace</em> work with Python 3?</a><a class="headerlink" href="#does-otrace-work-with-python-3" title="Permalink to this headline">¶</a></h2>
+<p>It appears to work when ported using the <tt class="docutils literal"><span class="pre">2to3</span></tt> tool, but no real testing
+has been done.</p>
+</div>
+<div class="section" id="what-license-is-otrace-distributed-under">
+<h2><a class="toc-backref" href="#id13">1.12&nbsp;&nbsp;&nbsp;What license is <em>otrace</em> distributed under?</a><a class="headerlink" href="#what-license-is-otrace-distributed-under" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference external" href="http://www.opensource.org/licenses/bsd-license.php">BSD 2-clause</a>
+open source license.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="README.html">README</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GettingStarted.html">Getting started with OTrace</a></li>
+<li class="toctree-l1"><a class="reference internal" href="UseWithTornado.html">Using OTrace with Tornado</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/mitotic/otrace">Source code at Github</a></li>
+<li class="toctree-l1"><a class="reference external" href="http://pypi.python.org/pypi/otrace">Download from PyPI package index</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="README.html" title="1   otrace: An object-oriented python debugger for nonlinear tracing"
+             >previous</a> |
+          <a href="GettingStarted.html" title="1   Getting started with otrace and oshell"
+             >next</a> |
+          <a href="genindex.html" title="General Index"
+             >index</a>
+            <br/>
+            <a href="_sources/FAQ.txt"
+               rel="nofollow">Show Source</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright 2012, R. Saravanan.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>
