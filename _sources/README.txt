@@ -91,7 +91,7 @@ Support
  - Report bugs and other issues using the Github `Issue Tracker <https://github.com/mitotic/otrace/issues>`_.
 
  - A tutorial using a demo program is available in
-    `docs/GettingStarted.rst <http://code.mindmeldr.com/otrace/otrace-getting-started>`_.
+    `docs/GettingStarted.rst <http://code.mindmeldr.com/otrace/GettingStarted.html>`_.
 
  - `Python and the Holy Grail of Debugging: An Introduction to OTrace (PDF: 1.3MB)
    <https://dl.dropbox.com/u/72208800/code/PyTexas12-OTrace-talk.pdf>`_:
