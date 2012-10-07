@@ -29,9 +29,9 @@ copyright = u'2012, R. Saravanan'
 # built documents.
 #
 # The short X.Y version.
-version = '0.10.0'
+version = '0.30.9'
 # The full version, including alpha/beta/rc tags.
-release = '0.10.0'
+release = '0.30.9'
 
 if about:
     version = about.version
