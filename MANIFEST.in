@@ -1,4 +1,5 @@
 include *.py *.rst *.html
 recursive-include demo *.osh *.patch
-recursive-include docs *.rst *.html
+recursive-include docs *.rst
+recursive-include www *.html
 recursive-include tornademos *.py *.html *.js *.css
