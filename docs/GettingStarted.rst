@@ -63,7 +63,7 @@ the prompt ">"). The ``help`` command displays all the available *oshell* comman
   Use TAB key for command completion.
   Type "help <command>" or "help *" for more info
 
-  See http://info.mindmeldr.com/code/otrace for documentation
+  See http://code.mindmeldr.com/otrace for documentation
   globals> help pwd
   pwd [-a]                  # Print current working "directory"
 

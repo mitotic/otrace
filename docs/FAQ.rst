@@ -73,7 +73,7 @@ available via the ``setuptools`` package.)
 Is there a graphical front-end to *otrace*?
 ============================================
 
-Yes, see `GraphTerm <http://info.mindmeldr.com/code/graphterm>`_ 
+Yes, see `GraphTerm <http://code.mindmeldr.com/graphterm>`_ 
 (Note: If you browse the code for *otrace*, you will notice the
 hooks used by the front-end, which could potentially be used by other
 graphical front-ends as well.
