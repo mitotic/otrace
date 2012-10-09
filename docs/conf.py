@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# gcowsay documentation build configuration file, created by
+# otrace documentation build configuration file, created by
 # sphinx-quickstart on Sat Oct  6 10:23:49 2012.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -13,15 +13,26 @@
 
 import sys, os
 
-parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0,parentdir)
+custom_theme = "sphinx-bootstrap"
+custom_theme = ""
+
+current_dir = os.path.abspath(os.path.dirname(__file__))
+parent_dir = os.path.dirname(current_dir)
+pkg_name = os.path.basename(parent_dir)
+pkg_dir = os.path.join(parent_dir, pkg_name)
+sys.path.insert(0, pkg_dir)
+
+if custom_theme:
+    theme_dir = os.path.join(current_dir, '_themes', custom_theme)
+    sys.path.insert(0, theme_dir)
+
 try:
     import about
 except ImportError:
     about = None
 
 # General information about the project.
-project = os.path.basename(os.path.dirname(os.getcwd()))
+project = pkg_name
 copyright = u'2012, R. Saravanan'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -37,6 +48,9 @@ if about:
     version = about.version
     release = about.version
 
+def setup(app):
+    app.add_config_value('custom_theme', '', True)
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -49,10 +63,10 @@ if about:
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = []
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode']
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = [] if custom_theme else ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -75,7 +89,7 @@ master_doc = 'index'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['_build']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -102,22 +116,32 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'agogo'
+html_theme = custom_theme or 'agogo'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #html_theme_options = {}
 
+if html_theme == "sphinx-bootstrap":
+    html_theme_options = {
+        'analytics_code': 'UA-35342722-1',
+        'github_user': 'mitotic',
+        'github_repo': 'otrace',
+        'twitter_username': 'otrace',
+        'home_url': 'http://code.mindmeldr.com/otrace',
+        # 'disqus_shortname': 'mindcoder',
+    }
+
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+html_theme_path = ['_themes']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
 #html_title = None
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-#html_short_title = None
+html_short_title = 'otrace'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -158,7 +182,7 @@ html_static_path = ['_static']
 #html_split_index = False
 
 # If true, links to the reST sources are added to the pages.
-#html_show_sourcelink = True
+html_show_sourcelink = False
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 #html_show_sphinx = True
@@ -175,7 +199,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'gcowsaydoc'
+htmlhelp_basename = 'otracedoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -194,7 +218,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'gcowsay.tex', u'gcowsay Documentation',
+  ('index', 'otrace.tex', u'otrace Documentation',
    u'R. Saravanan', 'manual'),
 ]
 
@@ -224,7 +248,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'gcowsay', u'gcowsay Documentation',
+    ('index', 'otrace', u'otrace Documentation',
      [u'R. Saravanan'], 1)
 ]
 
@@ -238,8 +262,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'gcowsay', u'gcowsay Documentation',
-   u'R. Saravanan', 'gcowsay', 'One line description of project.',
+  ('index', 'otrace', u'otrace Documentation',
+   u'R. Saravanan', 'otrace', 'One line description of project.',
    'Miscellaneous'),
 ]
 

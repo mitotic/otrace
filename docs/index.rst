@@ -6,8 +6,8 @@
 OTrace
 ===================================
 
-*Updates: The latest version is `0.30.9 <http://pypi.python.org/pypi/otrace>`_,
-released August 26, 2012.*
+*Updates:* The latest version is `0.30.9 <http://pypi.python.org/pypi/otrace>`_,
+released August 26, 2012.
 
 *OTrace* is an object-oriented python debugger for nonlinear
 tracing of asynchronous or multithreaded interactive programs.Its
