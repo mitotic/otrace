@@ -2346,8 +2346,8 @@ In directory /osh/patches, "unpatch *" will unpatch all currently patched method
             else:
                 return (cwd, err_str)
 
-        elif self.get_web_path():
-            # Non-otrace command; handle using web interface
+        elif self.get_web_path() and cmd != "ls":
+            # Non-directory command; handle using web interface
             if Set_params["safe_mode"]:
                 return ("", "Javascript console disabled in safe mode; cd /osh and set safe_mode False")
             try:
