@@ -28,7 +28,6 @@ div.header, div.content, div.footer {
   width: 70em;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 10px;
 }
 
 div.header-wrapper {
