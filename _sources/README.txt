@@ -7,7 +7,7 @@ otrace: An object-oriented python debugger for nonlinear tracing
 *otrace* on `GitHub <https://github.com/mitotic/otrace/downloads>`_.
 For a description of the `released version <http://pypi.python.org/pypi/otrace>`_,
 see the README file included with the distribution, or the
-`project website <http://code.mindmeldr.com/otrace>`_.
+`project website <http://code.mitotic.org/otrace>`_.
 
 Introduction
 =============================
@@ -48,7 +48,7 @@ of the running program.
 *otrace* takes control of the terminal, and would not work very
 well with programs that read user input directly from the terminal
 (or standard input). However, *otrace* has a browser-based graphical
-front-end, `GraphTerm <http://code.mindmeldr.com/graphterm>`_,
+front-end, `GraphTerm <http://code.mitotic.org/graphterm>`_,
 that can be used with programs that do read from the terminal.
 
 *otrace* does not consume any resources until some tracing action is
@@ -91,14 +91,14 @@ Support
  - Report bugs and other issues using the Github `Issue Tracker <https://github.com/mitotic/otrace/issues>`_.
 
  - A tutorial using a demo program is available in
-    `docs/GettingStarted.rst <http://code.mindmeldr.com/otrace/GettingStarted.html>`_.
+    `docs/GettingStarted.rst <http://code.mitotic.org/otrace/GettingStarted.html>`_.
 
  - `Python and the Holy Grail of Debugging: An Introduction to OTrace (PDF: 1.3MB)
    <https://dl.dropbox.com/u/72208800/code/PyTexas12-OTrace-talk.pdf>`_:
    slides from a talk given at PyTexas 2012.
 
  - Additional documentation and updates will be made available on the *project home page*,
-   `code.mindmeldr.com/otrace <http://code.mindmeldr.com/otrace>`_.
+   `code.mitotic.org/otrace <http://code.mitotic.org/otrace>`_.
 
 
 Using otrace from the command line

@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '0.30.9',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -35,11 +33,11 @@
 </script>
 
   </head>
-  <body>
+  <body role="document">
     <div class="header-wrapper">
       <div class="header">
         <div class="headertitle">
-          <a href="http://code.mindmeldr.com">code.mindmeldr.com</a>/<a href="index.html">otrace</a>
+          <a href="http://code.mitotic.org">code.mitotic.org</a>/<a href="index.html">otrace</a>
         </div>
         <div class="rel">
           <a href="GettingStarted.html" title="1   Getting started with otrace and oshell"
@@ -56,7 +54,7 @@
             
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="using-otrace-with-the-tornado-web-server">
 <h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Using <em>otrace</em> with the Tornado web server</a><a class="headerlink" href="#using-otrace-with-the-tornado-web-server" title="Permalink to this headline">¶</a></h1>
@@ -72,13 +70,13 @@
 </ul>
 </div>
 <p>This brief tutorial illustrates the use of <em>otrace</em> with the asynchronous
-Tornado web server using the demo program, <tt class="docutils literal"><span class="pre">tornademos/torna_trace.py</span></tt>,
+Tornado web server using the demo program, <code class="docutils literal"><span class="pre">tornademos/torna_trace.py</span></code>,
 included in the distribution. It is assumed that Tornado is installed
-in the system (or in the <tt class="docutils literal"><span class="pre">tornademos</span></tt> directory).</p>
+in the system (or in the <code class="docutils literal"><span class="pre">tornademos</span></code> directory).</p>
 <div class="section" id="setup">
 <h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Setup</a><a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
 <p>For use with Tornado, <em>otrace</em> requires a couple of additional
-options, <tt class="docutils literal"><span class="pre">hold_wrapper</span></tt> and <tt class="docutils literal"><span class="pre">eventloop_callback</span></tt>:</p>
+options, <code class="docutils literal"><span class="pre">hold_wrapper</span></code> and <code class="docutils literal"><span class="pre">eventloop_callback</span></code>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="c"># Initialize OShell instance (to run on separate thread)</span>
 <span class="n">IO_loop</span> <span class="o">=</span> <span class="n">tornado</span><span class="o">.</span><span class="n">ioloop</span><span class="o">.</span><span class="n">IOLoop</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
 <span class="n">trace_shell</span> <span class="o">=</span> <span class="n">OShell</span><span class="p">(</span><span class="n">locals_dict</span><span class="o">=</span><span class="nb">locals</span><span class="p">(),</span> <span class="n">globals_dict</span><span class="o">=</span><span class="nb">globals</span><span class="p">(),</span> <span class="n">allow_unsafe</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
@@ -103,18 +101,19 @@ options, <tt class="docutils literal"><span class="pre">hold_wrapper</span></tt>
 would halt the server. However, using the asynchronous request
 handling supported by Tornado, one can <em>hold</em> the execution of a
 single request using a statement of the form:</p>
-<div class="highlight-python"><pre>@tornado.web.asynchronous
+<div class="highlight-python"><div class="highlight"><pre>@tornado.web.asynchronous
 @tornado.gen.engine
 ...
-yield traceassert(number != "77", label="hold_check", action="hold")</pre>
+yield traceassert(number != &quot;77&quot;, label=&quot;hold_check&quot;, action=&quot;hold&quot;)
+</pre></div>
 </div>
 <p>instead of setting a breakpoint. The <em>hold</em> trace event occurs
-when the trace condition is false. The <tt class="docutils literal"><span class="pre">resume</span></tt> command is used
+when the trace condition is false. The <code class="docutils literal"><span class="pre">resume</span></code> command is used
 to resume execution from a hold. Here&#8217;s an example where a hold
 is triggered when a user enters the number <em>77</em> in the form:</p>
-<div class="highlight-python"><pre>tornademos$ ./torna_trace.py
+<div class="highlight-python"><div class="highlight"><pre>tornademos$ ./torna_trace.py
 Listening on port 8888
-  ***otrace object shell (v0.30)*** (type 'help' for info)
+  ***otrace object shell (v0.30)*** (type &#39;help&#39; for info)
 globals&gt; set trace_active True
 trace_active = True
 &gt; rootW path=/?number=1
@@ -128,48 +127,51 @@ __down __trc  number self
 GetHandler..06-24&gt; ls -l
 __down = {__trc, __down, __up}
 __trc  = {thread, framestack, frame, related, funcname, context, argvalues, where, id, argstr}
-number = u'77'
+number = u&#39;77&#39;
 self   = &lt;__main__.GetHandler object at 0x10ac0d950&gt;
 GetHandler..06-24&gt; resume
-globals&gt;</pre>
+globals&gt;
+</pre></div>
 </div>
 <p>Note that we need to activate tracing explicitly by setting parameter
-<tt class="docutils literal"><span class="pre">trace_active</span></tt> to True to trace <tt class="docutils literal"><span class="pre">traceassert</span></tt> calls. (This step is
-not needed when the <tt class="docutils literal"><span class="pre">trace</span></tt> command is used for tracing, because
+<code class="docutils literal"><span class="pre">trace_active</span></code> to True to trace <code class="docutils literal"><span class="pre">traceassert</span></code> calls. (This step is
+not needed when the <code class="docutils literal"><span class="pre">trace</span></code> command is used for tracing, because
 tracing is automatically activated.)</p>
 </div>
 <div class="section" id="osh-web">
 <h2><a class="toc-backref" href="#id4">1.3&nbsp;&nbsp;&nbsp;/osh/web</a><a class="headerlink" href="#osh-web" title="Permalink to this headline">¶</a></h2>
-<p>The <tt class="docutils literal"><span class="pre">/osh/web</span></tt> feature, used with Websockets and
+<p>The <code class="docutils literal"><span class="pre">/osh/web</span></code> feature, used with Websockets and
 some Javascript &#8220;glue code&#8221;, allows the <em>otrace</em> server console
 to execute arbitrary Javacript commands on the client-side browser.
-The demo program <tt class="docutils literal"><span class="pre">tornademos/chat_websock.py</span></tt> is a modified version
+The demo program <code class="docutils literal"><span class="pre">tornademos/chat_websock.py</span></code> is a modified version
 of the chat demo program distributed with Tornado, using websockets.
 If you run the program, and have one or more users chatting, you can
 execute javascript commands in any user&#8217;s browser via the
-<tt class="docutils literal"><span class="pre">/osh/web/username</span></tt> directory:</p>
-<div class="highlight-python"><pre>tornademos$ ./chat_websock.py
+<code class="docutils literal"><span class="pre">/osh/web/username</span></code> directory:</p>
+<div class="highlight-python"><div class="highlight"><pre>tornademos$ ./chat_websock.py
 chat_websock: Listening on 127.0.0.1:8888
-  ***otrace object shell (v0.30)*** (type 'help' for info)
+  ***otrace object shell (v0.30)*** (type &#39;help&#39; for info)
 &gt; cd /osh/web
 web&gt; ls
 user1
 web&gt; set safe_mode False
 safe_mode = False
 web&gt; cd user1
-web..user1&gt; $("body")
+web..user1&gt; $(&quot;body&quot;)
 [object Object]
-web..user1&gt; $("body").css("background","red") // Change background to red
-[object Object]</pre>
+web..user1&gt; $(&quot;body&quot;).css(&quot;background&quot;,&quot;red&quot;) // Change background to red
+[object Object]
+</pre></div>
 </div>
-<p>In <tt class="docutils literal"><span class="pre">chat_websock.py</span></tt>, user input is handled by the input element
+<p>In <code class="docutils literal"><span class="pre">chat_websock.py</span></code>, user input is handled by the input element
 with id <em>message</em>.
-The <tt class="docutils literal"><span class="pre">repeat</span></tt> command can be used to monitor user&#8217;s typing in real time:</p>
-<div class="highlight-python"><pre>web..user1&gt; $("#message")
+The <code class="docutils literal"><span class="pre">repeat</span></code> command can be used to monitor user&#8217;s typing in real time:</p>
+<div class="highlight-python"><div class="highlight"><pre>web..user1&gt; $(&quot;#message&quot;)
 [object Object]
-web..user1&gt; repeat "User is typing: "+$("#message").val()</pre>
+web..user1&gt; repeat &quot;User is typing: &quot;+$(&quot;#message&quot;).val()
+</pre></div>
 </div>
-<p><em>Last modified:</em> 2013-01-11</p>
+<p><em>Last modified:</em> 2016-03-31</p>
 </div>
 </div>
 
@@ -189,16 +191,18 @@ web..user1&gt; repeat "User is typing: "+$("#message").val()</pre>
 <li class="toctree-l1"><a class="reference external" href="http://pypi.python.org/pypi/otrace">Download from PyPI package index</a></li>
 </ul>
 
-          <h3 style="margin-top: 1.5em;">Search</h3>
-          <form class="search" action="search.html" method="get">
-            <input type="text" name="q" />
-            <input type="submit" value="Go" />
-            <input type="hidden" name="check_keywords" value="yes" />
-            <input type="hidden" name="area" value="default" />
-          </form>
-          <p class="searchtip" style="font-size: 90%">
-            Enter search terms or a module, class or function name.
-          </p>
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
         </div>
         <div class="clearer"></div>
       </div>
@@ -208,17 +212,21 @@ web..user1&gt; repeat "User is typing: "+$("#message").val()</pre>
     <div class="footer-wrapper">
       <div class="footer">
         <div class="left">
-          <a href="GettingStarted.html" title="1   Getting started with otrace and oshell"
-             >previous</a> |
-          <a href="genindex.html" title="General Index"
-             >index</a>
+          <div role="navigation" aria-label="related navigaton">
+            <a href="GettingStarted.html" title="1   Getting started with otrace and oshell"
+              >previous</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
         </div>
 
         <div class="right">
           
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2012, R. Saravanan.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
         </div>
         <div class="clearer"></div>

@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '0.30.9',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -36,11 +34,11 @@
 </script>
 
   </head>
-  <body>
+  <body role="document">
     <div class="header-wrapper">
       <div class="header">
         <div class="headertitle">
-          <a href="http://code.mindmeldr.com">code.mindmeldr.com</a>/<a href="index.html">otrace</a>
+          <a href="http://code.mitotic.org">code.mitotic.org</a>/<a href="index.html">otrace</a>
         </div>
         <div class="rel">
           <a href="FAQ.html" title="1   otrace FAQ"
@@ -59,7 +57,7 @@
             
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="getting-started-with-otrace-and-oshell">
 <h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Getting started with <em>otrace</em> and <em>oshell</em></a><a class="headerlink" href="#getting-started-with-otrace-and-oshell" title="Permalink to this headline">¶</a></h1>
@@ -83,7 +81,7 @@
 </ul>
 </div>
 <p>This tutorial introduces the main features of <em>otrace</em> by explaining
-how to &#8220;debug&#8221; the demo program, <tt class="docutils literal"><span class="pre">hello_trace.py</span></tt>,
+how to &#8220;debug&#8221; the demo program, <code class="docutils literal"><span class="pre">hello_trace.py</span></code>,
 included in the distribution.</p>
 <div class="section" id="installation">
 <h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Installation</a><a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
@@ -93,36 +91,37 @@ or the released archive from the
 <a class="reference external" href="http://pypi.python.org/pypi/otrace">Python Package Index</a>
 The unzipped archive should contain the following files (and some more):</p>
 <blockquote>
-<div><tt class="docutils literal"><span class="pre">hello_trace.py</span> <span class="pre">ordereddict.py</span> <span class="pre">otrace.py</span> <span class="pre">README.rst</span> <span class="pre">setup.py</span> <span class="pre">...</span></tt></div></blockquote>
+<div><code class="docutils literal"><span class="pre">hello_trace.py</span> <span class="pre">ordereddict.py</span> <span class="pre">otrace.py</span> <span class="pre">README.rst</span> <span class="pre">setup.py</span> <span class="pre">...</span></code></div></blockquote>
 <p>All the code for the <em>otrace</em> module is contained in a single file,
-<tt class="docutils literal"><span class="pre">otrace.py</span></tt>. (For python 2.6 or earlier, you will also need
-<tt class="docutils literal"><span class="pre">ordereddict.py</span></tt>.)  To use <em>otrace</em> without installing it, just
+<code class="docutils literal"><span class="pre">otrace.py</span></code>. (For python 2.6 or earlier, you will also need
+<code class="docutils literal"><span class="pre">ordereddict.py</span></code>.)  To use <em>otrace</em> without installing it, just
 ensure that these files are  present in the module load path.
 If you wish to install <em>otrace</em>, use:</p>
 <blockquote>
-<div><tt class="docutils literal"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></tt></div></blockquote>
+<div><code class="docutils literal"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code></div></blockquote>
 </div>
 <div class="section" id="demo-program">
 <h2><a class="toc-backref" href="#id3">1.2&nbsp;&nbsp;&nbsp;Demo program</a><a class="headerlink" href="#demo-program" title="Permalink to this headline">¶</a></h2>
-<p><tt class="docutils literal"><span class="pre">hello_trace.py</span></tt> is a simple multi-threaded web server using the
-<tt class="docutils literal"><span class="pre">BaseHTTPServer</span></tt> module. It listens on port 8888 and displays a simple
+<p><code class="docutils literal"><span class="pre">hello_trace.py</span></code> is a simple multi-threaded web server using the
+<code class="docutils literal"><span class="pre">BaseHTTPServer</span></code> module. It listens on port 8888 and displays a simple
 form where the user inputs a number and the server displays the
 reciprocal of the number. Inputting a zero value will raise an exception,
 which will be used to illustrate the capabilities of <em>otrace</em>.</p>
 <p>All the <em>oshell</em> commands used below are available in the script
-<tt class="docutils literal"><span class="pre">demo/hello_test.osh</span></tt>. Once you are comfortable with the steps in
+<code class="docutils literal"><span class="pre">demo/hello_test.osh</span></code>. Once you are comfortable with the steps in
 this tutorial, you can re-run the entire tutorial using the following
 command (in the <em>otrace</em> console):</p>
-<div class="highlight-python"><pre>source ~~w/demo/hello_test.osh</pre>
+<div class="highlight-python"><div class="highlight"><pre>source ~~w/demo/hello_test.osh
+</pre></div>
 </div>
 </div>
 <div class="section" id="help-cd-ls-and-view-commands">
 <h2><a class="toc-backref" href="#id4">1.3&nbsp;&nbsp;&nbsp;help, cd, ls, and view commands</a><a class="headerlink" href="#help-cd-ls-and-view-commands" title="Permalink to this headline">¶</a></h2>
-<p>Run <tt class="docutils literal"><span class="pre">hello_trace.py</span></tt> from the command line (user input appears after
-the prompt &#8220;&gt;&#8221;). The <tt class="docutils literal"><span class="pre">help</span></tt> command displays all the available <em>oshell</em> commands:</p>
-<div class="highlight-python"><pre>otrace$ ./hello_trace.py
+<p>Run <code class="docutils literal"><span class="pre">hello_trace.py</span></code> from the command line (user input appears after
+the prompt &#8220;&gt;&#8221;). The <code class="docutils literal"><span class="pre">help</span></code> command displays all the available <em>oshell</em> commands:</p>
+<div class="highlight-python"><div class="highlight"><pre>otrace$ ./hello_trace.py
 Listening on port 8888
-  ***otrace object shell (v0.30.0+)*** (type 'help' for info)
+  ***otrace object shell (v0.30.0+)*** (type &#39;help&#39; for info)
 &gt; help
 Commands:
 alias    cd       cdls     del      dn       edit     exec     help
@@ -130,62 +129,67 @@ lock     ls       popd     pr       pushd    pwd      quit     repeat
 resume   rm       run      save     set      source   swapd    tag
 trace    unpatch  unpickle untag    untrace  up       view
 
-If you omit the command, "pr" is assumed.
+If you omit the command, &quot;pr&quot; is assumed.
 Use TAB key for command completion.
-Type "help &lt;command&gt;" or "help *" for more info
+Type &quot;help &lt;command&gt;&quot; or &quot;help *&quot; for more info
 
-See http://code.mindmeldr.com/otrace for documentation
+See http://code.mitotic.org/otrace for documentation
 globals&gt; help pwd
-pwd [-a]                  # Print current working "directory"
+pwd [-a]                  # Print current working &quot;directory&quot;
 
--a Print all paths in stack; top first</pre>
+-a Print all paths in stack; top first
+</pre></div>
 </div>
-<p>The <tt class="docutils literal"><span class="pre">pwd</span></tt> command displays the current working directory.
-The <tt class="docutils literal"><span class="pre">ls</span></tt> command displays directory names and content. The special directory name <strong>~~</strong>
+<p>The <code class="docutils literal"><span class="pre">pwd</span></code> command displays the current working directory.
+The <code class="docutils literal"><span class="pre">ls</span></code> command displays directory names and content. The special directory name <strong>~~</strong>
 refers to the most recent <em>trace context</em>, and is initially
-<tt class="docutils literal"><span class="pre">/osh/globals</span></tt>.  There are also other special directory names of the
+<code class="docutils literal"><span class="pre">/osh/globals</span></code>.  There are also other special directory names of the
 form ~~&lt;letter&gt;:</p>
-<div class="highlight-python"><pre>&gt; pwd
+<div class="highlight-python"><div class="highlight"><pre>&gt; pwd
 /osh/globals
 &gt; ls ~~
 /osh/globals
 &gt; ls ~~g
 /osh/globals
 &gt; ls ~~w
-/Users/rsarava/app4/repo/meldr-hg/otrace</pre>
+/Users/rsarava/app4/repo/meldr-hg/otrace
+</pre></div>
 </div>
-<p>The <tt class="docutils literal"><span class="pre">ls</span></tt> options <em>-c</em>, <em>-f</em>, <em>-m</em>, <em>-v</em> can be used to selectively display
+<p>The <code class="docutils literal"><span class="pre">ls</span></code> options <em>-c</em>, <em>-f</em>, <em>-m</em>, <em>-v</em> can be used to selectively display
 only the <em>classes</em>, <em>functions/methods</em>, <em>modules</em>, and <em>variables</em> in
-a directory. Initially we examine the <tt class="docutils literal"><span class="pre">globals</span></tt> directory, which
-contains three classes, <tt class="docutils literal"><span class="pre">GetHandler,</span> <span class="pre">MultiThreadedServer,</span> <span class="pre">and</span> <span class="pre">OShell</span></tt>:</p>
-<div class="highlight-python"><pre>&gt; ls
+a directory. Initially we examine the <code class="docutils literal"><span class="pre">globals</span></code> directory, which
+contains three classes, <code class="docutils literal"><span class="pre">GetHandler,</span> <span class="pre">MultiThreadedServer,</span> <span class="pre">and</span> <span class="pre">OShell</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre>&gt; ls
 BaseHTTPServer      GetHandler          MultiThreadedServer OShell
 Page_template       Receive             Request_stats       SocketServer
 http_addr           http_port           http_server         logging
 send                sleep               sys                 test_fun
 trace_shell         traceassert         urlparse
 &gt; ls -c
-GetHandler          MultiThreadedServer OShell              Receive</pre>
+GetHandler          MultiThreadedServer OShell              Receive
+</pre></div>
 </div>
-<p>The <tt class="docutils literal"><span class="pre">cd</span></tt> command is used to change directories. Switching to the
-directory of class <tt class="docutils literal"><span class="pre">GetHandler</span></tt>, we note that it supports several methods, many of which
+<p>The <code class="docutils literal"><span class="pre">cd</span></code> command is used to change directories. Switching to the
+directory of class <code class="docutils literal"><span class="pre">GetHandler</span></code>, we note that it supports several methods, many of which
 are inherited:</p>
-<div class="highlight-python"><pre>&gt; cd GetHandler
+<div class="highlight-python"><div class="highlight"><pre>&gt; cd GetHandler
 osh..GetHandler&gt; ls -f
 address_string       date_time_string     do_GET               end_headers
 finish               handle               handle_one_request   log_date_time_string
 log_error            log_message          log_request          parse_request
 send_error           send_header          send_response        setup
-version_string</pre>
+version_string
+</pre></div>
 </div>
-<p>The <tt class="docutils literal"><span class="pre">ls</span></tt> options <em>-..</em> can be used to exclude inherited attributes
-of a class, and we note that <tt class="docutils literal"><span class="pre">GetHandler</span></tt> has just one method of its own:</p>
-<div class="highlight-python"><pre>osh..GetHandler&gt; ls -f -..
-do_GET</pre>
+<p>The <code class="docutils literal"><span class="pre">ls</span></code> options <em>-..</em> can be used to exclude inherited attributes
+of a class, and we note that <code class="docutils literal"><span class="pre">GetHandler</span></code> has just one method of its own:</p>
+<div class="highlight-python"><div class="highlight"><pre>osh..GetHandler&gt; ls -f -..
+do_GET
+</pre></div>
 </div>
-<p>We can examine the source code for the <tt class="docutils literal"><span class="pre">Receive.respond</span></tt> method using the
-<tt class="docutils literal"><span class="pre">view</span></tt> command with the <em>-i</em> (inline-display) option:</p>
-<div class="highlight-python"><pre>osh..GetHandler&gt; cd ..
+<p>We can examine the source code for the <code class="docutils literal"><span class="pre">Receive.respond</span></code> method using the
+<code class="docutils literal"><span class="pre">view</span></code> command with the <em>-i</em> (inline-display) option:</p>
+<div class="highlight-python"><div class="highlight"><pre>osh..GetHandler&gt; cd ..
 globals&gt; cd Receive
 osh..Receive&gt; ls
 respond
@@ -195,72 +199,76 @@ def respond(self, request):
 
     # Diagnostic print (initially commented out)
     ##if self.value &lt;= 0.001:
-    ##    print "Client address", request.client_address
+    ##    print &quot;Client address&quot;, request.client_address
 
     # Trace assertion (initially commented out)
-    ##otrace.traceassert(self.value &gt; 0.001, label="num_check")
+    ##otrace.traceassert(self.value &gt; 0.001, label=&quot;num_check&quot;)
 
     # Compute reciprocal of number
-    response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
-    return response</pre>
+    response = &quot;The reciprocal of %s is %s&quot; % (self.value, 1.0/self.value)
+    return response
+</pre></div>
 </div>
 </div>
 <div class="section" id="pr-and-exec-commands">
 <h2><a class="toc-backref" href="#id5">1.4&nbsp;&nbsp;&nbsp;pr and exec commands</a><a class="headerlink" href="#pr-and-exec-commands" title="Permalink to this headline">¶</a></h2>
-<p>The <tt class="docutils literal"><span class="pre">pr</span></tt> command prints out the value of a python expression. It is
+<p>The <code class="docutils literal"><span class="pre">pr</span></code> command prints out the value of a python expression. It is
 the default command, and is assumed if no command is recognized. So
 python expressions can usually be evaluated directly:</p>
-<div class="highlight-python"><pre>&gt; pwd
+<div class="highlight-python"><div class="highlight"><pre>&gt; pwd
 /osh/globals
 &gt; pr Request_stats
-{'count': 0, 'path': ''}
-&gt; Request_stats["count"]
+{&#39;count&#39;: 0, &#39;path&#39;: &#39;&#39;}
+&gt; Request_stats[&quot;count&quot;]
 0
 &gt; set safe_mode False
 safe_mode = False
-&gt; abs(Request_stats["count"] - 1)
-1</pre>
+&gt; abs(Request_stats[&quot;count&quot;] - 1)
+1
+</pre></div>
 </div>
 <p>To prevent inadvertent modification of a running program through
-function calls, parentheses are not allowed in <tt class="docutils literal"><span class="pre">pr</span></tt> expressions by default.
-Setting the <tt class="docutils literal"><span class="pre">safe_mode</span></tt> parameter to <tt class="docutils literal"><span class="pre">False</span></tt> allows their use.</p>
-<p>The <tt class="docutils literal"><span class="pre">exec</span></tt> command executes a python statement,
+function calls, parentheses are not allowed in <code class="docutils literal"><span class="pre">pr</span></code> expressions by default.
+Setting the <code class="docutils literal"><span class="pre">safe_mode</span></code> parameter to <code class="docutils literal"><span class="pre">False</span></code> allows their use.</p>
+<p>The <code class="docutils literal"><span class="pre">exec</span></code> command executes a python statement,
 like <em>assignment</em> or <em>import</em>. The prefix <em>!</em> may be used instead
-of <tt class="docutils literal"><span class="pre">exec</span></tt>. <tt class="docutils literal"><span class="pre">safe_mode</span></tt> must be <tt class="docutils literal"><span class="pre">False</span></tt> to use <tt class="docutils literal"><span class="pre">exec</span></tt>:</p>
-<div class="highlight-python"><pre>&gt; !Request_stats["count"] = 2</pre>
+of <code class="docutils literal"><span class="pre">exec</span></code>. <code class="docutils literal"><span class="pre">safe_mode</span></code> must be <code class="docutils literal"><span class="pre">False</span></code> to use <code class="docutils literal"><span class="pre">exec</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre>&gt; !Request_stats[&quot;count&quot;] = 2
+</pre></div>
 </div>
 </div>
 <div class="section" id="trace-command">
 <h2><a class="toc-backref" href="#id6">1.5&nbsp;&nbsp;&nbsp;trace command</a><a class="headerlink" href="#trace-command" title="Permalink to this headline">¶</a></h2>
-<p>The <tt class="docutils literal"><span class="pre">trace</span></tt> command is used to trace functions and methods. Without
-any options, it simply traces exceptions.  The <tt class="docutils literal"><span class="pre">-c</span> <span class="pre">&lt;condition&gt;</span></tt>
-option, where <tt class="docutils literal"><span class="pre">&lt;condition&gt;</span></tt> may be
-<tt class="docutils literal"><span class="pre">call</span></tt>, <tt class="docutils literal"><span class="pre">return</span></tt>, or <tt class="docutils literal"><span class="pre">all</span></tt>, may be used to trace function/method
-calls, returns, or both. <tt class="docutils literal"><span class="pre">&lt;condition&gt;</span></tt>  may also be
-<tt class="docutils literal"><span class="pre">argname1.comp1==value1,argname2!=value2,...</span></tt> to trace on argument
+<p>The <code class="docutils literal"><span class="pre">trace</span></code> command is used to trace functions and methods. Without
+any options, it simply traces exceptions.  The <code class="docutils literal"><span class="pre">-c</span> <span class="pre">&lt;condition&gt;</span></code>
+option, where <code class="docutils literal"><span class="pre">&lt;condition&gt;</span></code> may be
+<code class="docutils literal"><span class="pre">call</span></code>, <code class="docutils literal"><span class="pre">return</span></code>, or <code class="docutils literal"><span class="pre">all</span></code>, may be used to trace function/method
+calls, returns, or both. <code class="docutils literal"><span class="pre">&lt;condition&gt;</span></code>  may also be
+<code class="docutils literal"><span class="pre">argname1.comp1==value1,argname2!=value2,...</span></code> to trace on argument
 value matching (values with commas/spaces must be quoted; the special
-argument name <tt class="docutils literal"><span class="pre">return</span></tt> may also be used).
-Without any arguments, the <tt class="docutils literal"><span class="pre">trace</span></tt> command displays currently traced names.
-Next, we initiate tracing on the <tt class="docutils literal"><span class="pre">respond</span></tt> method  using the
-<tt class="docutils literal"><span class="pre">trace</span></tt> command:</p>
-<div class="highlight-python"><pre>globals&gt; cd ~~g
+argument name <code class="docutils literal"><span class="pre">return</span></code> may also be used).
+Without any arguments, the <code class="docutils literal"><span class="pre">trace</span></code> command displays currently traced names.
+Next, we initiate tracing on the <code class="docutils literal"><span class="pre">respond</span></code> method  using the
+<code class="docutils literal"><span class="pre">trace</span></code> command:</p>
+<div class="highlight-python"><div class="highlight"><pre>globals&gt; cd ~~g
 globals&gt; cd Receive
 osh..Receive&gt; trace respond
 Tracing Receive.respond
 osh..Receive&gt; trace
-Receive.respond</pre>
+Receive.respond
+</pre></div>
 </div>
 <p>Now we are ready to load the URL <em>http://localhost:8888</em> in the
 browser,  and enter numbers. Instead of using the browser, in
-this demo we will use the function <tt class="docutils literal"><span class="pre">submit</span></tt> that simulates browser
+this demo we will use the function <code class="docutils literal"><span class="pre">submit</span></code> that simulates browser
 input from the user. The command &#8220;submit(22)&#8221; would be equivalent
 to the user entering 22. A log message is generated for each value, and the
-zero input value triggers a <tt class="docutils literal"><span class="pre">ZeroDivisionError</span></tt> exception in the
-<tt class="docutils literal"><span class="pre">respond</span></tt> method. In the exception backtrace shown below, note
-the additional methods <tt class="docutils literal"><span class="pre">otrace_wrapped</span></tt> and
-<tt class="docutils literal"><span class="pre">otrace_function_call</span></tt> between <tt class="docutils literal"><span class="pre">do_GET</span></tt> and <tt class="docutils literal"><span class="pre">respond</span></tt>.
-These are inserted by <tt class="docutils literal"><span class="pre">otrace</span></tt> for tracing:</p>
-<div class="highlight-python"><pre>osh..Receive&gt; submit(3)
+zero input value triggers a <code class="docutils literal"><span class="pre">ZeroDivisionError</span></code> exception in the
+<code class="docutils literal"><span class="pre">respond</span></code> method. In the exception backtrace shown below, note
+the additional methods <code class="docutils literal"><span class="pre">otrace_wrapped</span></code> and
+<code class="docutils literal"><span class="pre">otrace_function_call</span></code> between <code class="docutils literal"><span class="pre">do_GET</span></code> and <code class="docutils literal"><span class="pre">respond</span></code>.
+These are inserted by <code class="docutils literal"><span class="pre">otrace</span></code> for tracing:</p>
+<div class="highlight-python"><div class="highlight"><pre>osh..Receive&gt; submit(3)
 rootW path=/?number=3
   &lt;span&gt;The reciprocal of 3.0 is 0.333333333333&lt;/span&gt;
 osh..Receive&gt; submit(0)
@@ -269,30 +277,32 @@ Receive.respond:ex-ZeroDivisionError:05-08-45
 rootE ERROR: float division by zero
 Server error:
 Traceback (most recent call last):
-  File "./hello_trace.py", line 76, in do_GET
+  File &quot;./hello_trace.py&quot;, line 76, in do_GET
     resp = Page_template % recv.respond(self)
-  File "/Users/rsarava/app4/repo/mitotic/otrace/otrace.py", line 4601, in otrace_wrapped
+  File &quot;/Users/rsarava/app4/repo/mitotic/otrace/otrace.py&quot;, line 4601, in otrace_wrapped
     return cls.otrace_function_call(func_info, *args, **kwargs)
-  File "/Users/rsarava/app4/repo/mitotic/otrace/otrace.py", line 4373, in otrace_function_call
+  File &quot;/Users/rsarava/app4/repo/mitotic/otrace/otrace.py&quot;, line 4373, in otrace_function_call
     return_value = info.fn(*args, **kwargs)
-  File "./hello_trace.py", line 104, in respond
-    response = "The reciprocal of %s is %s" % (self.value, 1.0/self.value)
-ZeroDivisionError: float division by zero</pre>
+  File &quot;./hello_trace.py&quot;, line 104, in respond
+    response = &quot;The reciprocal of %s is %s&quot; % (self.value, 1.0/self.value)
+ZeroDivisionError: float division by zero
+</pre></div>
 </div>
 <p>When a trace condition occurs, like an exception in a traced function or method, a <em>trace id</em>
-<tt class="docutils literal"><span class="pre">GetHandler.respond:ex-ZeroDivisionError:05-08-45</span></tt> is generated and displayed,
-as shown above. Also, the default action of the <tt class="docutils literal"><span class="pre">trace</span></tt> command is
+<code class="docutils literal"><span class="pre">GetHandler.respond:ex-ZeroDivisionError:05-08-45</span></code> is generated and displayed,
+as shown above. Also, the default action of the <code class="docutils literal"><span class="pre">trace</span></code> command is
 to create a new virtual directory
-<tt class="docutils literal"><span class="pre">/osh/recent/exceptions/GetHandler.respond/ex-ZeroDivisionError/05-08-45</span></tt>
+<code class="docutils literal"><span class="pre">/osh/recent/exceptions/GetHandler.respond/ex-ZeroDivisionError/05-08-45</span></code>
 to hold the <em>trace context</em> for the event. The shorthand notation
 <strong>~~</strong> can be used  to display the most recent <em>trace context</em>:</p>
-<div class="highlight-python"><pre>osh..Receive&gt; ls ~~
+<div class="highlight-python"><div class="highlight"><pre>osh..Receive&gt; ls ~~
 /osh/recent/exceptions/Receive.respond/ex-ZeroDivisionError/05-08-45
-osh..Receive&gt; cd ~~</pre>
+osh..Receive&gt; cd ~~
+</pre></div>
 </div>
 <p>The trace context contains information about the function like
 argument values and the call stack.:</p>
-<div class="highlight-python"><pre>Receive..08-45&gt; ls
+<div class="highlight-python"><div class="highlight"><pre>Receive..08-45&gt; ls
 __trc   __up    request self
 Receive..08-45&gt; ls -l
 __trc   = {exc_context, thread, framestack, frame, related, funcname, context, exc_stack, where, id, argvalues}
@@ -305,57 +315,59 @@ argvalues   context     exc_context exc_stack   frame       framestack  funcname
 id          related     thread      where
 osh..__trc&gt; ls -l where
 where =
-'__bootstrap--&gt;__bootstrap_inner--&gt;run--&gt;process_request_thread--&gt;finish_request--&gt;__init__--&gt;handle--&gt;handle_one_request--&gt;do_GET--&gt;respond'</pre>
+&#39;__bootstrap--&gt;__bootstrap_inner--&gt;run--&gt;process_request_thread--&gt;finish_request--&gt;__init__--&gt;handle--&gt;handle_one_request--&gt;do_GET--&gt;respond&#39;
+</pre></div>
 </div>
 </div>
 <div class="section" id="edit-and-traceassert">
 <h2><a class="toc-backref" href="#id7">1.6&nbsp;&nbsp;&nbsp;edit and traceassert</a><a class="headerlink" href="#edit-and-traceassert" title="Permalink to this headline">¶</a></h2>
-<p>The <tt class="docutils literal"><span class="pre">edit</span></tt> command is perhaps the most useful command in <em>otrace</em>. It
+<p>The <code class="docutils literal"><span class="pre">edit</span></code> command is perhaps the most useful command in <em>otrace</em>. It
 allows you to modify (<a class="reference external" href="http://en.wikipedia.org/wiki/Monkey_patch">monkey patch</a>)
 any function or method in the running program. In particular, it makes
 it easy to use the &#8220;oldest&#8221; debugging technique, viz., inserting
-<tt class="docutils literal"><span class="pre">print</span></tt> statements in the code,
+<code class="docutils literal"><span class="pre">print</span></code> statements in the code,
 without having to modify the actual source code files. You can also
-insert calls to <tt class="docutils literal"><span class="pre">traceassert</span></tt>, which is the equivalent of setting
+insert calls to <code class="docutils literal"><span class="pre">traceassert</span></code>, which is the equivalent of setting
 conditional breakpoints in the code.</p>
 <p>Now that we know the there is an exception occurring in the method
-<tt class="docutils literal"><span class="pre">respond</span></tt>, we pretend that we don&#8217;t know the exact cause, and will
-use <tt class="docutils literal"><span class="pre">traceassert</span></tt> to determine the cause. The <tt class="docutils literal"><span class="pre">traceassert</span></tt>
-function has the signature <tt class="docutils literal"><span class="pre">traceassert(condition,</span> <span class="pre">label=&quot;&quot;,</span> <span class="pre">action=&quot;&quot;)</span></tt>.
-As long as <tt class="docutils literal"><span class="pre">condition</span></tt> is true, <tt class="docutils literal"><span class="pre">traceassert</span></tt> simply returns. If
-<tt class="docutils literal"><span class="pre">condition</span></tt> is false, the call is logged and a <em>trace context</em>
+<code class="docutils literal"><span class="pre">respond</span></code>, we pretend that we don&#8217;t know the exact cause, and will
+use <code class="docutils literal"><span class="pre">traceassert</span></code> to determine the cause. The <code class="docutils literal"><span class="pre">traceassert</span></code>
+function has the signature <code class="docutils literal"><span class="pre">traceassert(condition,</span> <span class="pre">label=&quot;&quot;,</span> <span class="pre">action=&quot;&quot;)</span></code>.
+As long as <code class="docutils literal"><span class="pre">condition</span></code> is true, <code class="docutils literal"><span class="pre">traceassert</span></code> simply returns. If
+<code class="docutils literal"><span class="pre">condition</span></code> is false, the call is logged and a <em>trace context</em>
 virtual directory is created.</p>
 <p>We suspect that the exception is caused because the user entered a
 number that was too small. First, we switch off <em>safe mode</em>, which
-disallows code editing. We then use the <tt class="docutils literal"><span class="pre">edit</span></tt> command to modify
-the <tt class="docutils literal"><span class="pre">respond</span></tt> method in the running program to insert a
-call to <tt class="docutils literal"><span class="pre">traceassert</span></tt>. (Actually <tt class="docutils literal"><span class="pre">hello_trace.py</span></tt> already has a
-<tt class="docutils literal"><span class="pre">traceassert</span></tt> call that is commented out. We simply uncomment it,
-as well as the diagnostic <tt class="docutils literal"><span class="pre">print</span></tt> statement, via the <tt class="docutils literal"><span class="pre">edit</span></tt> command.):</p>
-<div class="highlight-python"><pre>osh..__trc&gt; cd ~~g
+disallows code editing. We then use the <code class="docutils literal"><span class="pre">edit</span></code> command to modify
+the <code class="docutils literal"><span class="pre">respond</span></code> method in the running program to insert a
+call to <code class="docutils literal"><span class="pre">traceassert</span></code>. (Actually <code class="docutils literal"><span class="pre">hello_trace.py</span></code> already has a
+<code class="docutils literal"><span class="pre">traceassert</span></code> call that is commented out. We simply uncomment it,
+as well as the diagnostic <code class="docutils literal"><span class="pre">print</span></code> statement, via the <code class="docutils literal"><span class="pre">edit</span></code> command.):</p>
+<div class="highlight-python"><div class="highlight"><pre>osh..__trc&gt; cd ~~g
 globals&gt; set safe_mode False
 safe_mode = False
 globals&gt; set trace_active True
 trace_active = True
 globals&gt; edit Receive.respond
-Patched Receive.respond:</pre>
+Patched Receive.respond:
+</pre></div>
 </div>
 <p>Note that we need to activate tracing explicitly by setting parameter
-<tt class="docutils literal"><span class="pre">trace_active</span></tt> to <tt class="docutils literal"><span class="pre">True</span></tt> to trace <tt class="docutils literal"><span class="pre">traceassert</span></tt> calls. (This step
-is not needed when the <tt class="docutils literal"><span class="pre">trace</span></tt> command is used, because tracing is
+<code class="docutils literal"><span class="pre">trace_active</span></code> to <code class="docutils literal"><span class="pre">True</span></code> to trace <code class="docutils literal"><span class="pre">traceassert</span></code> calls. (This step
+is not needed when the <code class="docutils literal"><span class="pre">trace</span></code> command is used, because tracing is
 automatically activated.)
-After the edit, the statement <tt class="docutils literal"><span class="pre">otrace.traceassert(number</span> <span class="pre">&gt;</span> <span class="pre">0.001,</span> <span class="pre">label=&quot;num_check&quot;)</span></tt>
-has been inserted into <tt class="docutils literal"><span class="pre">Receive.respond</span></tt>. In the browser, enter the number
+After the edit, the statement <code class="docutils literal"><span class="pre">otrace.traceassert(number</span> <span class="pre">&gt;</span> <span class="pre">0.001,</span> <span class="pre">label=&quot;num_check&quot;)</span></code>
+has been inserted into <code class="docutils literal"><span class="pre">Receive.respond</span></code>. In the browser, enter the number
 2 and then the number 0.0005. The latter value triggers a false
-condition on the <tt class="docutils literal"><span class="pre">traceassert</span></tt>. We switch to the assert trace
-context directory <tt class="docutils literal"><span class="pre">/osh/recent/asserts/Receive.respond/as-num_check/04-57-54</span></tt>,
+condition on the <code class="docutils literal"><span class="pre">traceassert</span></code>. We switch to the assert trace
+context directory <code class="docutils literal"><span class="pre">/osh/recent/asserts/Receive.respond/as-num_check/04-57-54</span></code>,
 which allows us to examine the local variables when the assertion failed:</p>
-<div class="highlight-python"><pre>globals&gt; submit(2)
+<div class="highlight-python"><div class="highlight"><pre>globals&gt; submit(2)
 rootW path=/?number=2
   &lt;span&gt;The reciprocal of 2.0 is 0.5&lt;/span&gt;
 globals&gt; submit(0.0005)
 rootW path=/?number=0.0005
-Client address ('127.0.0.1', 62008)
+Client address (&#39;127.0.0.1&#39;, 62008)
 Receive.respond:as-num_check:05-08-51
   &lt;span&gt;The reciprocal of 0.0005 is 2000.0&lt;/span&gt;
 globals&gt; ls ~~
@@ -369,23 +381,24 @@ Receive..08-51&gt; request.headers
 Accept-Encoding: identity
 Host: 127.0.0.1:8888
 Connection: close
-User-Agent: Python-urllib/2.7</pre>
+User-Agent: Python-urllib/2.7
+</pre></div>
 </div>
-<p>The default action when the <tt class="docutils literal"><span class="pre">traceassert</span></tt> condition is false is to
-create the trace context directory. The <tt class="docutils literal"><span class="pre">action</span></tt> argument to
-<tt class="docutils literal"><span class="pre">traceassert</span></tt> can be used set a breakpoint when the assertion fails
+<p>The default action when the <code class="docutils literal"><span class="pre">traceassert</span></code> condition is false is to
+create the trace context directory. The <code class="docutils literal"><span class="pre">action</span></code> argument to
+<code class="docutils literal"><span class="pre">traceassert</span></code> can be used set a breakpoint when the assertion fails
 (as explained later).
-For efficiency, the trace context for <tt class="docutils literal"><span class="pre">traceassert</span></tt> does not save the
+For efficiency, the trace context for <code class="docutils literal"><span class="pre">traceassert</span></code> does not save the
 backtrace stack local variables or source code information by default.
-To enable backtracing of stack and source code, <tt class="docutils literal"><span class="pre">set</span> <span class="pre">assert_context</span></tt>
+To enable backtracing of stack and source code, <code class="docutils literal"><span class="pre">set</span> <span class="pre">assert_context</span></code>
 to a non-zero value.</p>
 </div>
 <div class="section" id="unpatch-and-untrace">
 <h2><a class="toc-backref" href="#id8">1.7&nbsp;&nbsp;&nbsp;unpatch and untrace</a><a class="headerlink" href="#unpatch-and-untrace" title="Permalink to this headline">¶</a></h2>
-<p>After debugging is complete, the <tt class="docutils literal"><span class="pre">unpatch</span></tt> command can be used to
-restore  the original code for <tt class="docutils literal"><span class="pre">Receive.respond</span></tt>.
-The <tt class="docutils literal"><span class="pre">untrace</span></tt> command can be used to switch off tracing:</p>
-<div class="highlight-python"><pre>globals&gt; cd /osh/patches
+<p>After debugging is complete, the <code class="docutils literal"><span class="pre">unpatch</span></code> command can be used to
+restore  the original code for <code class="docutils literal"><span class="pre">Receive.respond</span></code>.
+The <code class="docutils literal"><span class="pre">untrace</span></code> command can be used to switch off tracing:</p>
+<div class="highlight-python"><div class="highlight"><pre>globals&gt; cd /osh/patches
 patches&gt; ls
 Receive.respond
 patches&gt; unpatch Receive.respond
@@ -395,31 +408,32 @@ patches&gt; trace
 Receive.respond
 globals&gt; untrace Receive.respond
 untraced Receive.respond
-globals&gt;</pre>
+globals&gt;
+</pre></div>
 </div>
 </div>
 <div class="section" id="object-tag-tracing">
 <h2><a class="toc-backref" href="#id9">1.8&nbsp;&nbsp;&nbsp;Object tag tracing</a><a class="headerlink" href="#object-tag-tracing" title="Permalink to this headline">¶</a></h2>
-<p>One of the allowed actions in the <tt class="docutils literal"><span class="pre">trace</span> <span class="pre">-a</span> <span class="pre">&lt;action&gt;</span> <span class="pre">-c</span> <span class="pre">&lt;condition&gt;</span> <span class="pre">...</span></tt>
-command is <tt class="docutils literal"><span class="pre">tag</span></tt>. The tag action adds a special attribute to the
-<tt class="docutils literal"><span class="pre">self</span></tt> object if the trace condition is met <em>at the time a function returns</em>.
+<p>One of the allowed actions in the <code class="docutils literal"><span class="pre">trace</span> <span class="pre">-a</span> <span class="pre">&lt;action&gt;</span> <span class="pre">-c</span> <span class="pre">&lt;condition&gt;</span> <span class="pre">...</span></code>
+command is <code class="docutils literal"><span class="pre">tag</span></code>. The tag action adds a special attribute to the
+<code class="docutils literal"><span class="pre">self</span></code> object if the trace condition is met <em>at the time a function returns</em>.
 The tag attribute is just a string, usually the object&#8217;s
-<tt class="docutils literal"><span class="pre">id</span></tt>, but can also be the current time or some other string.
+<code class="docutils literal"><span class="pre">id</span></code>, but can also be the current time or some other string.
 The presence of tagged arguments can be specified as a trace condition
-for subsequent tracing of a function, using the <tt class="docutils literal"><span class="pre">-c</span> <span class="pre">tagged[&lt;argname&gt;]</span></tt>
-option. The commands <tt class="docutils literal"><span class="pre">tag</span></tt> and <tt class="docutils literal"><span class="pre">untag</span></tt> can be used to directly
+for subsequent tracing of a function, using the <code class="docutils literal"><span class="pre">-c</span> <span class="pre">tagged[&lt;argname&gt;]</span></code>
+option. The commands <code class="docutils literal"><span class="pre">tag</span></code> and <code class="docutils literal"><span class="pre">untag</span></code> can be used to directly
 add/remove the tag attribute.</p>
-<p>In the example below, the method <tt class="docutils literal"><span class="pre">Receive.__init__</span></tt> will tag the
-<tt class="docutils literal"><span class="pre">self</span></tt> object if <tt class="docutils literal"><span class="pre">self.value</span></tt> equals 1 when the method returns.
-Then, we trace <tt class="docutils literal"><span class="pre">Receive.respond</span></tt> if its argument named <tt class="docutils literal"><span class="pre">self</span></tt>
+<p>In the example below, the method <code class="docutils literal"><span class="pre">Receive.__init__</span></code> will tag the
+<code class="docutils literal"><span class="pre">self</span></code> object if <code class="docutils literal"><span class="pre">self.value</span></code> equals 1 when the method returns.
+Then, we trace <code class="docutils literal"><span class="pre">Receive.respond</span></code> if its argument named <code class="docutils literal"><span class="pre">self</span></code>
 is tagged. First, we submit the value 2, which does not trigger
-tagging. Next, we submit the value 1, which causes the <tt class="docutils literal"><span class="pre">self</span></tt>
-object to be tagged when <tt class="docutils literal"><span class="pre">Receive.__init__</span></tt> returns, and
-then triggers a trace context for <tt class="docutils literal"><span class="pre">Receive.respond</span></tt> because
+tagging. Next, we submit the value 1, which causes the <code class="docutils literal"><span class="pre">self</span></code>
+object to be tagged when <code class="docutils literal"><span class="pre">Receive.__init__</span></code> returns, and
+then triggers a trace context for <code class="docutils literal"><span class="pre">Receive.respond</span></code> because
 one of its arguments is tagged:</p>
-<div class="highlight-python"><pre>globals&gt; cd ~~g
+<div class="highlight-python"><div class="highlight"><pre>globals&gt; cd ~~g
 globals&gt; trace -a tag -c self.value==1 Receive.__init__
-Tracing -a tag -c {'self.value==': 1L} Receive.__init__
+Tracing -a tag -c {&#39;self.value==&#39;: 1L} Receive.__init__
 globals&gt; trace -c taggedself Receive.respond
 Tracing -c taggedself Receive.respond
 globals&gt; submit(2)
@@ -434,20 +448,21 @@ globals&gt; cd ~~
 Receive..04-42.0&gt; pwd
 /osh/recent/traces/Receive.respond/tr-taggedself;tg-self.value==1;0x103231090/17-04-42.0
 Receive..04-42.0&gt; ls
-__trc   request self</pre>
+__trc   request self
+</pre></div>
 </div>
 </div>
 <div class="section" id="preserving-trace-contexts">
 <h2><a class="toc-backref" href="#id10">1.9&nbsp;&nbsp;&nbsp;Preserving trace contexts</a><a class="headerlink" href="#preserving-trace-contexts" title="Permalink to this headline">¶</a></h2>
-<p>Only a limited number of trace contexts (controlled by <tt class="docutils literal"><span class="pre">set</span> <span class="pre">max_recent</span></tt>)
+<p>Only a limited number of trace contexts (controlled by <code class="docutils literal"><span class="pre">set</span> <span class="pre">max_recent</span></code>)
 are retained in memory. If there are too many contexts, the oldest
-contexts are deleted. The  <tt class="docutils literal"><span class="pre">save</span></tt> command can be used to preserve
-trace contexts in memory. The <tt class="docutils literal"><span class="pre">set</span> <span class="pre">pickle_file</span></tt> command can be used
+contexts are deleted. The  <code class="docutils literal"><span class="pre">save</span></code> command can be used to preserve
+trace contexts in memory. The <code class="docutils literal"><span class="pre">set</span> <span class="pre">pickle_file</span></code> command can be used
 to specify a <em>pickle</em> database file in which to save all trace
 contexts. This pickle database file can be opened at a later time
-using the <tt class="docutils literal"><span class="pre">unpickle</span></tt> command to read trace contexts into the
-<tt class="docutils literal"><span class="pre">/osh/pickled</span></tt> directory:</p>
-<div class="highlight-python"><pre>Receive..04-42.0&gt; cd ~~g
+using the <code class="docutils literal"><span class="pre">unpickle</span></code> command to read trace contexts into the
+<code class="docutils literal"><span class="pre">/osh/pickled</span></code> directory:</p>
+<div class="highlight-python"><div class="highlight"><pre>Receive..04-42.0&gt; cd ~~g
 globals&gt; set pickle_file trace_test.db
 pickle_file = trace_test.db
 globals&gt; trace Receive.respond
@@ -461,40 +476,42 @@ exceptions
 pickled&gt; cd exceptions/Receive.respond/ex-ZeroDivisionError/17-06-22.0/:
 osh..:&gt; ls
 __trc   __up    request self
-osh..:&gt;</pre>
+osh..:&gt;
+</pre></div>
 </div>
-<p>The special directory <tt class="docutils literal"><span class="pre">:</span></tt> is used to denote the content of the trace
+<p>The special directory <code class="docutils literal"><span class="pre">:</span></code> is used to denote the content of the trace
 context.</p>
 </div>
 <div class="section" id="monitoring-using-the-repeat-command">
 <h2><a class="toc-backref" href="#id11">1.10&nbsp;&nbsp;&nbsp;Monitoring using the repeat command</a><a class="headerlink" href="#monitoring-using-the-repeat-command" title="Permalink to this headline">¶</a></h2>
-<p>The <tt class="docutils literal"><span class="pre">repeat</span></tt> command indefinitely repeats whatever command that
+<p>The <code class="docutils literal"><span class="pre">repeat</span></code> command indefinitely repeats whatever command that
 follows it, erasing the screen each time before displaying the
 output. The default repeat interval is 0.2 seconds, and that
-can be changed via the <tt class="docutils literal"><span class="pre">set</span> <span class="pre">repeat_interval</span></tt> command.
+can be changed via the <code class="docutils literal"><span class="pre">set</span> <span class="pre">repeat_interval</span></code> command.
 Any user input, or a trace event will end the repeat cycle.
-Here&#8217;s an example of using <tt class="docutils literal"><span class="pre">repeat</span></tt> to monitor requests
+Here&#8217;s an example of using <code class="docutils literal"><span class="pre">repeat</span></code> to monitor requests
 processed by the demo web server:</p>
-<div class="highlight-python"><pre>&gt; repeat ls -l Request_stats/*</pre>
+<div class="highlight-python"><div class="highlight"><pre>&gt; repeat ls -l Request_stats/*
+</pre></div>
 </div>
 </div>
 <div class="section" id="breakpoints">
 <h2><a class="toc-backref" href="#id12">1.11&nbsp;&nbsp;&nbsp;Breakpoints</a><a class="headerlink" href="#breakpoints" title="Permalink to this headline">¶</a></h2>
-<p>Breakpoints can be set using the <tt class="docutils literal"><span class="pre">-a</span> <span class="pre">break</span></tt> option for the <tt class="docutils literal"><span class="pre">trace</span></tt>
-command, or the <tt class="docutils literal"><span class="pre">action=&quot;break&quot;</span></tt> argument to <tt class="docutils literal"><span class="pre">traceassert</span></tt>.
+<p>Breakpoints can be set using the <code class="docutils literal"><span class="pre">-a</span> <span class="pre">break</span></code> option for the <code class="docutils literal"><span class="pre">trace</span></code>
+command, or the <code class="docutils literal"><span class="pre">action=&quot;break&quot;</span></code> argument to <code class="docutils literal"><span class="pre">traceassert</span></code>.
 In a multi-threaded program, there may be more than one breakpoint
-active at a time. To resume execution, issue the <tt class="docutils literal"><span class="pre">resume</span></tt> command
+active at a time. To resume execution, issue the <code class="docutils literal"><span class="pre">resume</span></code> command
 when the current directory is within the <em>trace context</em> of the
 breakpoint to be resumed, or specify the <em>trace id</em> to be resumed as
 the argument.</p>
-<p>NOTE: The <tt class="docutils literal"><span class="pre">trace</span></tt> command cannot set breakpoints at specific lines.
-Use the <tt class="docutils literal"><span class="pre">edit</span></tt> command to insert <tt class="docutils literal"><span class="pre">traceassert</span></tt> calls to break at
+<p>NOTE: The <code class="docutils literal"><span class="pre">trace</span></code> command cannot set breakpoints at specific lines.
+Use the <code class="docutils literal"><span class="pre">edit</span></code> command to insert <code class="docutils literal"><span class="pre">traceassert</span></code> calls to break at
 specific locations within a function or method.</p>
-<p>Other possible actions for <tt class="docutils literal"><span class="pre">trace</span></tt> and <tt class="docutils literal"><span class="pre">traceassert</span></tt> include
-<tt class="docutils literal"><span class="pre">pdb</span></tt> or <tt class="docutils literal"><span class="pre">ipdb</span></tt>, which launch the respective debuggers at the
-breakpoint. The <tt class="docutils literal"><span class="pre">continue</span></tt> command of these debuggers should be used
+<p>Other possible actions for <code class="docutils literal"><span class="pre">trace</span></code> and <code class="docutils literal"><span class="pre">traceassert</span></code> include
+<code class="docutils literal"><span class="pre">pdb</span></code> or <code class="docutils literal"><span class="pre">ipdb</span></code>, which launch the respective debuggers at the
+breakpoint. The <code class="docutils literal"><span class="pre">continue</span></code> command of these debuggers should be used
 to return control of the terminal to <em>otrace</em>.</p>
-<p><em>Last modified:</em> 2013-01-11</p>
+<p><em>Last modified:</em> 2016-03-31</p>
 </div>
 </div>
 
@@ -514,16 +531,18 @@ to return control of the terminal to <em>otrace</em>.</p>
 <li class="toctree-l1"><a class="reference external" href="http://pypi.python.org/pypi/otrace">Download from PyPI package index</a></li>
 </ul>
 
-          <h3 style="margin-top: 1.5em;">Search</h3>
-          <form class="search" action="search.html" method="get">
-            <input type="text" name="q" />
-            <input type="submit" value="Go" />
-            <input type="hidden" name="check_keywords" value="yes" />
-            <input type="hidden" name="area" value="default" />
-          </form>
-          <p class="searchtip" style="font-size: 90%">
-            Enter search terms or a module, class or function name.
-          </p>
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
         </div>
         <div class="clearer"></div>
       </div>
@@ -533,19 +552,23 @@ to return control of the terminal to <em>otrace</em>.</p>
     <div class="footer-wrapper">
       <div class="footer">
         <div class="left">
-          <a href="FAQ.html" title="1   otrace FAQ"
-             >previous</a> |
-          <a href="UseWithTornado.html" title="1   Using otrace with the Tornado web server"
-             >next</a> |
-          <a href="genindex.html" title="General Index"
-             >index</a>
+          <div role="navigation" aria-label="related navigaton">
+            <a href="FAQ.html" title="1   otrace FAQ"
+              >previous</a> |
+            <a href="UseWithTornado.html" title="1   Using otrace with the Tornado web server"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
         </div>
 
         <div class="right">
           
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2012, R. Saravanan.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
         </div>
         <div class="clearer"></div>

@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '0.30.9',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -36,11 +34,11 @@
 </script>
 
   </head>
-  <body>
+  <body role="document">
     <div class="header-wrapper">
       <div class="header">
         <div class="headertitle">
-          <a href="http://code.mindmeldr.com">code.mindmeldr.com</a>/<a href="index.html">otrace</a>
+          <a href="http://code.mitotic.org">code.mitotic.org</a>/<a href="index.html">otrace</a>
         </div>
         <div class="rel">
           <a href="index.html" title="OTrace"
@@ -59,7 +57,7 @@
             
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="otrace-an-object-oriented-python-debugger-for-nonlinear-tracing">
 <h1><a class="toc-backref" href="#id2">1&nbsp;&nbsp;&nbsp;otrace: An object-oriented python debugger for nonlinear tracing</a><a class="headerlink" href="#otrace-an-object-oriented-python-debugger-for-nonlinear-tracing" title="Permalink to this headline">¶</a></h1>
@@ -86,7 +84,7 @@
 <em>otrace</em> on <a class="reference external" href="https://github.com/mitotic/otrace/downloads">GitHub</a>.
 For a description of the <a class="reference external" href="http://pypi.python.org/pypi/otrace">released version</a>,
 see the README file included with the distribution, or the
-<a class="reference external" href="http://code.mindmeldr.com/otrace">project website</a>.</p>
+<a class="reference external" href="http://code.mitotic.org/otrace">project website</a>.</p>
 <div class="section" id="introduction">
 <h2><a class="toc-backref" href="#id3">1.1&nbsp;&nbsp;&nbsp;Introduction</a><a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
 <p><em>otrace</em> is an object-oriented debugger for nonlinear tracing
@@ -102,7 +100,7 @@ of variables for tracing, &#8220;tagging&#8221; objects for tracking across
 different method invocations, and modifying live code
 (&#8220;monkey patching&#8221;) to insert print statements etc.</p>
 <p><em>otrace</em> maps all the objects in the running program, as well as the
-&#8220;snapshot&#8221; objects, to a virtual filesystem mounted under <tt class="docutils literal"><span class="pre">/osh</span></tt>.
+&#8220;snapshot&#8221; objects, to a virtual filesystem mounted under <code class="docutils literal"><span class="pre">/osh</span></code>.
 It provides a shell-like interface, <em>oshell</em>, with commands like
 <em>cd</em>, <em>ls</em> etc. that can be used to browse classes, methods, and
 instance variables in the virtual filesystem. Tab completion and
@@ -125,7 +123,7 @@ of the running program.</p>
 <p><em>otrace</em> takes control of the terminal, and would not work very
 well with programs that read user input directly from the terminal
 (or standard input). However, <em>otrace</em> has a browser-based graphical
-front-end, <a class="reference external" href="http://code.mindmeldr.com/graphterm">GraphTerm</a>,
+front-end, <a class="reference external" href="http://code.mitotic.org/graphterm">GraphTerm</a>,
 that can be used with programs that do read from the terminal.</p>
 <p><em>otrace</em> does not consume any resources until some tracing action is
 initiated. So it can be included in production code without any
@@ -136,20 +134,20 @@ or using the GraphTerm front-tend.</p>
 </div>
 <div class="section" id="installation">
 <h2><a class="toc-backref" href="#id4">1.2&nbsp;&nbsp;&nbsp;Installation</a><a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<p>If you wish to install <em>otrace</em> without the sample programs, the <tt class="docutils literal"><span class="pre">easy_install</span> <span class="pre">otrace</span></tt>
-command should be sufficient (provided the <tt class="docutils literal"><span class="pre">setuptools</span></tt> module is installed).</p>
+<p>If you wish to install <em>otrace</em> without the sample programs, the <code class="docutils literal"><span class="pre">easy_install</span> <span class="pre">otrace</span></code>
+command should be sufficient (provided the <code class="docutils literal"><span class="pre">setuptools</span></code> module is installed).</p>
 <p>The latest released version of <em>otrace</em>, including sample programs,
 may be downloaded from the <a class="reference external" href="http://pypi.python.org/pypi/otrace">Python Package Index</a>
 The untarred/unzipped archive should contain the following files (and some more):</p>
 <blockquote>
-<div><tt class="docutils literal"><span class="pre">hello_trace.py</span> <span class="pre">ordereddict.py</span> <span class="pre">otrace.py</span> <span class="pre">README.rst</span> <span class="pre">setup.py</span> <span class="pre">...</span></tt></div></blockquote>
+<div><code class="docutils literal"><span class="pre">hello_trace.py</span> <span class="pre">ordereddict.py</span> <span class="pre">otrace.py</span> <span class="pre">README.rst</span> <span class="pre">setup.py</span> <span class="pre">...</span></code></div></blockquote>
 <p>All the code for the <em>otrace</em> module is contained in a single file,
-<tt class="docutils literal"><span class="pre">otrace.py</span></tt>. (For python 2.6 or earlier, you will also need
-<tt class="docutils literal"><span class="pre">ordereddict.py</span></tt>.)  To use <em>otrace</em> without installing it, just
+<code class="docutils literal"><span class="pre">otrace.py</span></code>. (For python 2.6 or earlier, you will also need
+<code class="docutils literal"><span class="pre">ordereddict.py</span></code>.)  To use <em>otrace</em> without installing it, just
 ensure that these files are  present in the module load path.
 If you wish to install <em>otrace</em>, use:</p>
 <blockquote>
-<div><tt class="docutils literal"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></tt></div></blockquote>
+<div><code class="docutils literal"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code></div></blockquote>
 <p>The development version of <em>otrace</em> may be downloaded from
 <a class="reference external" href="https://github.com/mitotic/otrace/downloads">Github</a>.</p>
 </div>
@@ -163,7 +161,7 @@ If you wish to install <em>otrace</em>, use:</p>
 </li>
 <li><dl class="first docutils">
 <dt>A tutorial using a demo program is available in</dt>
-<dd><p class="first last"><a class="reference external" href="http://code.mindmeldr.com/otrace/GettingStarted.html">docs/GettingStarted.rst</a>.</p>
+<dd><p class="first last"><a class="reference external" href="http://code.mitotic.org/otrace/GettingStarted.html">docs/GettingStarted.rst</a>.</p>
 </dd>
 </dl>
 </li>
@@ -171,35 +169,39 @@ If you wish to install <em>otrace</em>, use:</p>
 slides from a talk given at PyTexas 2012.</p>
 </li>
 <li><p class="first">Additional documentation and updates will be made available on the <em>project home page</em>,
-<a class="reference external" href="http://code.mindmeldr.com/otrace">code.mindmeldr.com/otrace</a>.</p>
+<a class="reference external" href="http://code.mitotic.org/otrace">code.mitotic.org/otrace</a>.</p>
 </li>
 </ul>
 </div></blockquote>
 </div>
 <div class="section" id="using-otrace-from-the-command-line">
 <h2><a class="toc-backref" href="#id6">1.4&nbsp;&nbsp;&nbsp;Using otrace from the command line</a><a class="headerlink" href="#using-otrace-from-the-command-line" title="Permalink to this headline">¶</a></h2>
-<p>If you have a program <tt class="docutils literal"><span class="pre">example.py</span></tt> whose execution you wish to
-trace, use the <tt class="docutils literal"><span class="pre">otrace</span></tt> command (or the program <tt class="docutils literal"><span class="pre">otrace.py</span></tt>, if
+<p>If you have a program <code class="docutils literal"><span class="pre">example.py</span></code> whose execution you wish to
+trace, use the <code class="docutils literal"><span class="pre">otrace</span></code> command (or the program <code class="docutils literal"><span class="pre">otrace.py</span></code>, if
 you have not installed <em>otrace</em>):</p>
-<div class="highlight-python"><pre>otrace example.py</pre>
+<div class="highlight-python"><div class="highlight"><pre>otrace example.py
+</pre></div>
 </div>
-<p>You will see the <em>otrace</em> console. To execute a function <tt class="docutils literal"><span class="pre">main()</span></tt> in
-<tt class="docutils literal"><span class="pre">example.py</span></tt>, type the following command:</p>
-<div class="highlight-python"><pre>run main</pre>
+<p>You will see the <em>otrace</em> console. To execute a function <code class="docutils literal"><span class="pre">main()</span></code> in
+<code class="docutils literal"><span class="pre">example.py</span></code>, type the following command:</p>
+<div class="highlight-python"><div class="highlight"><pre>run main
+</pre></div>
 </div>
-<p>To execute the function <tt class="docutils literal"><span class="pre">test(arg=[])</span></tt> that accepts a single
+<p>To execute the function <code class="docutils literal"><span class="pre">test(arg=[])</span></code> that accepts a single
 argument that is a list of strings, type:</p>
-<div class="highlight-python"><pre>run test arg1 arg2</pre>
+<div class="highlight-python"><div class="highlight"><pre>run test arg1 arg2
+</pre></div>
 </div>
 <p>You can also invoke this function directly from the command line as
 follows:</p>
-<div class="highlight-python"><pre>otrace -f test example.py arg1 arg2</pre>
+<div class="highlight-python"><div class="highlight"><pre>otrace -f test example.py arg1 arg2
+</pre></div>
 </div>
-<p>In this case, the program will exit when the function <tt class="docutils literal"><span class="pre">test</span></tt>
+<p>In this case, the program will exit when the function <code class="docutils literal"><span class="pre">test</span></code>
 returns.
 (At this time, only functions that accept no arguments, or a single
 optional argument that is a list of strings, can be invoked directly
-from the command line or using the <tt class="docutils literal"><span class="pre">run</span></tt> command.)</p>
+from the command line or using the <code class="docutils literal"><span class="pre">run</span></code> command.)</p>
 </div>
 <div class="section" id="using-otrace-from-within-a-program">
 <h2><a class="toc-backref" href="#id7">1.5&nbsp;&nbsp;&nbsp;Using otrace from within a program</a><a class="headerlink" href="#using-otrace-from-within-a-program" title="Permalink to this headline">¶</a></h2>
@@ -207,14 +209,15 @@ from the command line or using the <tt class="docutils literal"><span class="pre
 cases, you may wish to include <em>otrace</em> within your program for more
 complex situations. In a program with an event loop, <em>otrace</em> would be
 typically included as follows:</p>
-<div class="highlight-python"><pre>import otrace
+<div class="highlight-python"><div class="highlight"><pre>import otrace
 # Start otrace (in its own thread)
 oshell = otrace.set_trace(globals(), new_thread=True)
 try:
     # Run main program event loop ...
 except KeyboardInterrupt:
     # Clean shutdown of otrace (to avoid hung threads)
-    oshell.shutdown()</pre>
+    oshell.shutdown()
+</pre></div>
 </div>
 <p>Similar to <em>pdb</em>, <em>otrace</em> can also be invoked &#8220;as needed&#8221; within a program as follows:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">otrace</span>
@@ -222,7 +225,7 @@ except KeyboardInterrupt:
 </pre></div>
 </div>
 <p>In this case, <em>otrace</em> will run in the calling thread, and the calling program
-will resume only after the <tt class="docutils literal"><span class="pre">quit</span></tt> command is typed in the <em>otrace</em>
+will resume only after the <code class="docutils literal"><span class="pre">quit</span></code> command is typed in the <em>otrace</em>
 console.</p>
 <p>For interactively running functions in a program, you would include
 <em>otrace</em> as follows:</p>
@@ -231,29 +234,29 @@ console.</p>
 </pre></div>
 </div>
 <p>In this case, <em>otrace</em> will run in a separate thread, but will wait
-for the <tt class="docutils literal"><span class="pre">run</span></tt> command to invoke a function in the main thread.
-(A new <tt class="docutils literal"><span class="pre">run</span></tt> command can be issued only after the function returns.)</p>
+for the <code class="docutils literal"><span class="pre">run</span></code> command to invoke a function in the main thread.
+(A new <code class="docutils literal"><span class="pre">run</span></code> command can be issued only after the function returns.)</p>
 <p><em>Usage notes:</em></p>
 <blockquote>
 <div><ul>
 <li><p class="first">If you run in <em>oshell</em> in its own daemon thread as shown above, use
-the Control-C sequence to abort the main thread, and call <tt class="docutils literal"><span class="pre">shutdown</span></tt>
+the Control-C sequence to abort the main thread, and call <code class="docutils literal"><span class="pre">shutdown</span></code>
 from the main thread to cleanup.</p>
 </li>
-<li><p class="first">Install the python <tt class="docutils literal"><span class="pre">readline</span></tt> module (<tt class="docutils literal"><span class="pre">easy_install</span> <span class="pre">readline</span></tt>) to enable <em>TAB</em> command completion.</p>
+<li><p class="first">Install the python <code class="docutils literal"><span class="pre">readline</span></code> module (<code class="docutils literal"><span class="pre">easy_install</span> <span class="pre">readline</span></code>) to enable <em>TAB</em> command completion.</p>
 </li>
 <li><dl class="first docutils">
 <dt>To start a detached server (daemon) process, use the command:</dt>
-<dd><p class="first last"><tt class="docutils literal"><span class="pre">screen</span> <span class="pre">-d</span> <span class="pre">-m</span> <span class="pre">-S</span> <span class="pre">&lt;screen_name&gt;</span> <span class="pre">&lt;executable&gt;</span> <span class="pre">&lt;argument1&gt;</span> <span class="pre">...</span></tt></p>
+<dd><p class="first last"><code class="docutils literal"><span class="pre">screen</span> <span class="pre">-d</span> <span class="pre">-m</span> <span class="pre">-S</span> <span class="pre">&lt;screen_name&gt;</span> <span class="pre">&lt;executable&gt;</span> <span class="pre">&lt;argument1&gt;</span> <span class="pre">...</span></code></p>
 </dd>
 <dt>To attach a terminal to this process, use:</dt>
-<dd><p class="first last"><tt class="docutils literal"><span class="pre">screen</span> <span class="pre">-r</span> <span class="pre">&lt;screen_name&gt;</span></tt></p>
+<dd><p class="first last"><code class="docutils literal"><span class="pre">screen</span> <span class="pre">-r</span> <span class="pre">&lt;screen_name&gt;</span></code></p>
 </dd>
 </dl>
 </li>
-<li><p class="first">By default, <em>otrace</em> logs to the <tt class="docutils literal"><span class="pre">logging</span></tt> module. Subclass
-<tt class="docutils literal"><span class="pre">TraceCallback</span></tt>, overriding the methods <tt class="docutils literal"><span class="pre">callback</span></tt> and <tt class="docutils literal"><span class="pre">returnback</span></tt>
-to implement your own logging  (see <tt class="docutils literal"><span class="pre">DefaultCallback</span></tt> for a simple example)</p>
+<li><p class="first">By default, <em>otrace</em> logs to the <code class="docutils literal"><span class="pre">logging</span></code> module. Subclass
+<code class="docutils literal"><span class="pre">TraceCallback</span></code>, overriding the methods <code class="docutils literal"><span class="pre">callback</span></code> and <code class="docutils literal"><span class="pre">returnback</span></code>
+to implement your own logging  (see <code class="docutils literal"><span class="pre">DefaultCallback</span></code> for a simple example)</p>
 </li>
 </ul>
 </div></blockquote>
@@ -262,55 +265,58 @@ to implement your own logging  (see <tt class="docutils literal"><span class="pr
 <h2><a class="toc-backref" href="#id8">1.6&nbsp;&nbsp;&nbsp;Implementation</a><a class="headerlink" href="#implementation" title="Permalink to this headline">¶</a></h2>
 <p><em>otrace</em> uses a <em>Virtual Directory Shell Interface</em> which maps all the
 objects in a a running python program to a virtual filesystem mounted in
-the directory <tt class="docutils literal"><span class="pre">/osh</span></tt> (sort of like the unix <tt class="docutils literal"><span class="pre">/proc</span></tt> filesystem, if you are
+the directory <code class="docutils literal"><span class="pre">/osh</span></code> (sort of like the unix <code class="docutils literal"><span class="pre">/proc</span></code> filesystem, if you are
 familiar with it). Each module, class, method, function, and variable in the global namespace
 is mapped to a virtual file within this directory.
-For example, a class <tt class="docutils literal"><span class="pre">TestClass</span></tt> in the <tt class="docutils literal"><span class="pre">globals()</span></tt> dictionary can be accessed as:</p>
-<div class="highlight-python"><pre>/osh/globals/TestClass</pre>
+For example, a class <code class="docutils literal"><span class="pre">TestClass</span></code> in the <code class="docutils literal"><span class="pre">globals()</span></code> dictionary can be accessed as:</p>
+<div class="highlight-python"><div class="highlight"><pre>/osh/globals/TestClass
+</pre></div>
 </div>
-<p>and a method <tt class="docutils literal"><span class="pre">test_method</span></tt> can be accessed as:</p>
-<div class="highlight-python"><pre>/osh/globals/TestClass/test_method</pre>
+<p>and a method <code class="docutils literal"><span class="pre">test_method</span></code> can be accessed as:</p>
+<div class="highlight-python"><div class="highlight"><pre>/osh/globals/TestClass/test_method
+</pre></div>
 </div>
 <p>and so on.</p>
 <p><em>otrace</em> provides a unix shell-like interface, <em>oshell</em>, with commands
-such as <tt class="docutils literal"><span class="pre">cd</span></tt>, <tt class="docutils literal"><span class="pre">ls</span></tt>, <tt class="docutils literal"><span class="pre">view</span></tt>, and <tt class="docutils literal"><span class="pre">edit</span></tt> that can be used navigate, view,
+such as <code class="docutils literal"><span class="pre">cd</span></code>, <code class="docutils literal"><span class="pre">ls</span></code>, <code class="docutils literal"><span class="pre">view</span></code>, and <code class="docutils literal"><span class="pre">edit</span></code> that can be used navigate, view,
 and edit the virtual files. Editing a function or method
 &#8220;<a class="reference external" href="http://en.wikipedia.org/wiki/Monkey_patch">monkey patches</a>&#8221;  it,
-allowing the insertion of <tt class="docutils literal"><span class="pre">print</span></tt> statements etc. in the running program.</p>
-<p>The <tt class="docutils literal"><span class="pre">trace</span></tt> command allows dynamic tracing of function or method invocations,
+allowing the insertion of <code class="docutils literal"><span class="pre">print</span></code> statements etc. in the running program.</p>
+<p>The <code class="docutils literal"><span class="pre">trace</span></code> command allows dynamic tracing of function or method invocations,
 return values, and exceptions. This is accomplished by
 dynamically <em>decorating</em> (or <em>wrapping</em>) the function to be traced.
 When a trace condition is satisfied, the function-wrapper saves
 <em>context information</em>, such as arguments and return values,
 in a newly created virtual directory in:</p>
-<div class="highlight-python"><pre>/osh/recent/*</pre>
+<div class="highlight-python"><div class="highlight"><pre>/osh/recent/*
+</pre></div>
 </div>
 <p>These <em>trace context</em> directories can be navigated just like
-<tt class="docutils literal"><span class="pre">/osh/globals/*</span></tt>. (If there are too many trace contexts, the oldest
+<code class="docutils literal"><span class="pre">/osh/globals/*</span></code>. (If there are too many trace contexts, the oldest
 ones are deleted, unless they have been explicitly <em>saved</em>.)</p>
 <p><em>oshell</em> allows standard unix shell commands to be interspersed with
 <em>oshell</em>-specific commands. The path of the &#8220;current working directory&#8221;
 determines which of the these two types of commands will be executed.
-If the current working directory is not in <tt class="docutils literal"><span class="pre">/osh/*</span></tt>, the command is
-treated as a standard unix shell command (except for <tt class="docutils literal"><span class="pre">cd</span></tt>, which is
+If the current working directory is not in <code class="docutils literal"><span class="pre">/osh/*</span></code>, the command is
+treated as a standard unix shell command (except for <code class="docutils literal"><span class="pre">cd</span></code>, which is
 always handled by <em>oshell</em>.)</p>
 </div>
 <div class="section" id="commands">
 <h2><a class="toc-backref" href="#id9">1.7&nbsp;&nbsp;&nbsp;Commands</a><a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h2>
 <p><em>oshell</em> supports the following commands ([..] denotes optional
 parameters; | denotes alternatives):</p>
-<div class="highlight-python"><pre>alias name cmd &lt;arg\*&gt; &lt;arg\1&gt;... # Define alias for command
-cd [pathname]             # change directory to "pathname", which may be omitted, "..", or "/" or a path
-cdls [pathname]           # cd to "pathname" and list "files" (cd+ls)
+<div class="highlight-python"><div class="highlight"><pre>alias name cmd &lt;arg\*&gt; &lt;arg\1&gt;... # Define alias for command
+cd [pathname]             # change directory to &quot;pathname&quot;, which may be omitted, &quot;..&quot;, or &quot;/&quot; or a path
+cdls [pathname]           # cd to &quot;pathname&quot; and list &quot;files&quot; (cd+ls)
 del [trace_id1..]         # Delete trace context
 dn                        # Command alias to move one level down in stack frames in a trace context (to a newer frame)
 edit [-f] (filename|class[.method]) [&lt; readfile]  # Edit/patch file/method/function
 exec python_code          # Execute python code (also !&lt;python_code&gt;)
 help [command|*]          # Display help information
 lock                      # Lock terminal until password is entered
-ls [-acflmtv] [-(.|..|.baseclass)] [pathname1|*]   # List pathname values (or all pathnames in current "directory")
+ls [-acflmtv] [-(.|..|.baseclass)] [pathname1|*]   # List pathname values (or all pathnames in current &quot;directory&quot;)
 pr python_expression      # Print value of expression (DEFAULT COMMAND)
-pwd                       # Print current working "directory"
+pwd                       # Print current working &quot;directory&quot;
 quit                      # Quit shell
 run function [arg1 ...]   # Run function in main thread with optional string list argument
 repeat command            # Repeat command till new input is received
@@ -326,17 +332,18 @@ unpickle filename [field=value]        # Read pickled trace contexts from file
 untag [object|.]          # untag object
 untrace ([class.][method]|*|all)  # Disable tracing for class/method
 up                        # Command alias to move one level up in stack frames in a trace context (to an older frame)
-view [-d] [-i] [class/method/file]  # Display source/doc for objects/traces/files</pre>
+view [-d] [-i] [class/method/file]  # Display source/doc for objects/traces/files
+</pre></div>
 </div>
-<p>The default command is <tt class="docutils literal"><span class="pre">pr</span></tt>, which evaluates an expression.  So you
+<p>The default command is <code class="docutils literal"><span class="pre">pr</span></code>, which evaluates an expression.  So you
 can simply type a python variable to print out its value. You can also
-insert <tt class="docutils literal"><span class="pre">otrace.traceassert(&lt;condition&gt;,label=..,action=..)</span></tt> to trace
+insert <code class="docutils literal"><span class="pre">otrace.traceassert(&lt;condition&gt;,label=..,action=..)</span></code> to trace
 assertions.</p>
 </div>
 <div class="section" id="python-3">
 <h2><a class="toc-backref" href="#id10">1.8&nbsp;&nbsp;&nbsp;Python 3</a><a class="headerlink" href="#python-3" title="Permalink to this headline">¶</a></h2>
-<p><tt class="docutils literal"><span class="pre">otrace.py</span></tt> and the demo program <tt class="docutils literal"><span class="pre">hello_trace.py</span></tt> work with Python
-3, after porting using the <tt class="docutils literal"><span class="pre">2to3</span></tt> tool. Further testing remains to be done.</p>
+<p><code class="docutils literal"><span class="pre">otrace.py</span></code> and the demo program <code class="docutils literal"><span class="pre">hello_trace.py</span></code> work with Python
+3, after porting using the <code class="docutils literal"><span class="pre">2to3</span></code> tool. Further testing remains to be done.</p>
 </div>
 <div class="section" id="caveats">
 <h2><a class="toc-backref" href="#id11">1.9&nbsp;&nbsp;&nbsp;Caveats</a><a class="headerlink" href="#caveats" title="Permalink to this headline">¶</a></h2>
@@ -370,9 +377,9 @@ assertions.</p>
 <dt><em>otrace</em> was inspired by the following:</dt>
 <dd><ul class="first last simple">
 <li>the tracing module <a class="reference external" href="http://wordaligned.org/articles/echo">echo.py</a> written by Thomas Guest &lt;<a class="reference external" href="mailto:tag&#37;&#52;&#48;wordaligned&#46;org">tag<span>&#64;</span>wordaligned<span>&#46;</span>org</a>&gt;. This nifty little program uses decorators to trace function calls.</li>
-<li>the python <tt class="docutils literal"><span class="pre">dir()</span></tt> function, which treats objects as directories. If objects are directories, then shouldn&#8217;t we be able to inspect them using the familiar <tt class="docutils literal"><span class="pre">cd</span></tt> and <tt class="docutils literal"><span class="pre">ls</span></tt> unix shell commands?</li>
-<li>the unix <a class="reference external" href="http://en.wikipedia.org/wiki/Procfs">proc</a> filesystem, which cleverly maps non-file data to a filesystem interface mounted at <tt class="docutils literal"><span class="pre">/proc</span></tt></li>
-<li>the movie <a class="reference external" href="http://en.wikipedia.org/wiki/Being_John_Malkovich">Being John Malkovich</a> (think of <tt class="docutils literal"><span class="pre">/osh</span></tt> as the portal to the &#8220;mind&#8221; of a running program)</li>
+<li>the python <code class="docutils literal"><span class="pre">dir()</span></code> function, which treats objects as directories. If objects are directories, then shouldn&#8217;t we be able to inspect them using the familiar <code class="docutils literal"><span class="pre">cd</span></code> and <code class="docutils literal"><span class="pre">ls</span></code> unix shell commands?</li>
+<li>the unix <a class="reference external" href="http://en.wikipedia.org/wiki/Procfs">proc</a> filesystem, which cleverly maps non-file data to a filesystem interface mounted at <code class="docutils literal"><span class="pre">/proc</span></code></li>
+<li>the movie <a class="reference external" href="http://en.wikipedia.org/wiki/Being_John_Malkovich">Being John Malkovich</a> (think of <code class="docutils literal"><span class="pre">/osh</span></code> as the portal to the &#8220;mind&#8221; of a running program)</li>
 </ul>
 </dd>
 </dl>
@@ -399,16 +406,18 @@ assertions.</p>
 <li class="toctree-l1"><a class="reference external" href="http://pypi.python.org/pypi/otrace">Download from PyPI package index</a></li>
 </ul>
 
-          <h3 style="margin-top: 1.5em;">Search</h3>
-          <form class="search" action="search.html" method="get">
-            <input type="text" name="q" />
-            <input type="submit" value="Go" />
-            <input type="hidden" name="check_keywords" value="yes" />
-            <input type="hidden" name="area" value="default" />
-          </form>
-          <p class="searchtip" style="font-size: 90%">
-            Enter search terms or a module, class or function name.
-          </p>
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
         </div>
         <div class="clearer"></div>
       </div>
@@ -418,19 +427,23 @@ assertions.</p>
     <div class="footer-wrapper">
       <div class="footer">
         <div class="left">
-          <a href="index.html" title="OTrace"
-             >previous</a> |
-          <a href="FAQ.html" title="1   otrace FAQ"
-             >next</a> |
-          <a href="genindex.html" title="General Index"
-             >index</a>
+          <div role="navigation" aria-label="related navigaton">
+            <a href="index.html" title="OTrace"
+              >previous</a> |
+            <a href="FAQ.html" title="1   otrace FAQ"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
         </div>
 
         <div class="right">
           
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2012, R. Saravanan.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
         </div>
         <div class="clearer"></div>

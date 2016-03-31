@@ -1,7 +1,4 @@
 
-
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -17,7 +14,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '0.30.9',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -36,11 +33,11 @@
 </script>
 
   </head>
-  <body>
+  <body role="document">
     <div class="header-wrapper">
       <div class="header">
         <div class="headertitle">
-          <a href="http://code.mindmeldr.com">code.mindmeldr.com</a>/<a href="index.html">otrace</a>
+          <a href="http://code.mitotic.org">code.mitotic.org</a>/<a href="index.html">otrace</a>
         </div>
         <div class="rel">
           <a href="#" title="General Index"
@@ -55,7 +52,7 @@
             
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
 
 <h1 id="index">Index</h1>
@@ -80,16 +77,18 @@
 <li class="toctree-l1"><a class="reference external" href="http://pypi.python.org/pypi/otrace">Download from PyPI package index</a></li>
 </ul>
 
-          <h3 style="margin-top: 1.5em;">Search</h3>
-          <form class="search" action="search.html" method="get">
-            <input type="text" name="q" />
-            <input type="submit" value="Go" />
-            <input type="hidden" name="check_keywords" value="yes" />
-            <input type="hidden" name="area" value="default" />
-          </form>
-          <p class="searchtip" style="font-size: 90%">
-            Enter search terms or a module, class or function name.
-          </p>
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
         </div>
         <div class="clearer"></div>
       </div>
@@ -99,15 +98,19 @@
     <div class="footer-wrapper">
       <div class="footer">
         <div class="left">
-          <a href="#" title="General Index"
-             >index</a>
+          <div role="navigation" aria-label="related navigaton">
+            <a href="#" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
         </div>
 
         <div class="right">
           
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2012, R. Saravanan.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
         </div>
         <div class="clearer"></div>
